@@ -11,7 +11,10 @@ import {
   Settings,
   Copy,
   Archive,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +56,7 @@ export function SectionManager({
   onSectionsChange,
   onError,
 }: SectionManagerProps) {
+  const { toast } = useToast();
   const [expandedSections, setExpandedSections] = useState<Set<number>>(
     new Set(),
   );
@@ -64,6 +68,12 @@ export function SectionManager({
   const [sectionQuestions, setSectionQuestions] = useState<
     Record<number, FormQuestion[]>
   >({});
+  const [isClient, setIsClient] = useState(false);
+
+  // Set client-side flag to prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Load questions for expanded sections
   useEffect(() => {
@@ -116,11 +126,28 @@ export function SectionManager({
       if (response.status === "success" && response.data) {
         onSectionsChange([...sections, response.data]);
         setShowCreateDialog(false);
+        toast({
+          title: "Success",
+          description: "Section created successfully!",
+          variant: "default",
+        });
       } else {
-        onError(handleApiError(response));
+        const errorMsg = handleApiError(response);
+        onError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      onError("Failed to create section");
+      const errorMsg = "Failed to create section";
+      onError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -138,11 +165,28 @@ export function SectionManager({
           sections.map((s) => (s.id === sectionId ? response.data! : s)),
         );
         setEditingSection(null);
+        toast({
+          title: "Success",
+          description: "Section updated successfully!",
+          variant: "default",
+        });
       } else {
-        onError(handleApiError(response));
+        const errorMsg = handleApiError(response);
+        onError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      onError("Failed to update section");
+      const errorMsg = "Failed to update section";
+      onError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +195,7 @@ export function SectionManager({
   const handleDeleteSection = async (sectionId: number) => {
     if (
       !confirm(
-        "Are you sure you want to delete this section? All questions in this section will also be deleted.",
+        "Are you sure you want to archive this section? All questions in this section will also be archived. This action can be reversed later if needed.",
       )
     ) {
       return;
@@ -168,11 +212,28 @@ export function SectionManager({
           delete newQuestions[sectionId];
           return newQuestions;
         });
+        toast({
+          title: "Success",
+          description: "Section archived successfully!",
+          variant: "default",
+        });
       } else {
-        onError(handleApiError(response));
+        const errorMsg = handleApiError(response);
+        onError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      onError("Failed to delete section");
+      const errorMsg = "Failed to archive section";
+      onError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -255,7 +316,9 @@ export function SectionManager({
                             {section.isActive ? "Active" : "Inactive"}
                           </Badge>
                           <Badge variant="outline" className="text-xs">
-                            {sectionQuestions[section.id]?.length || 0}{" "}
+                            {isClient
+                              ? sectionQuestions[section.id]?.length || 0
+                              : 0}{" "}
                             questions
                           </Badge>
                         </div>
@@ -273,8 +336,9 @@ export function SectionManager({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteSection(section.id)}
+                        className="text-red-600 hover:text-red-700"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Archive className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>

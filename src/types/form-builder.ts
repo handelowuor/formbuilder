@@ -71,6 +71,7 @@ export interface FormQuestion {
   required: boolean;
   validation: Record<string, any>;
   visibleIf: any[];
+  visibleIfJson?: Record<string, any>;
   defaultValue?: string;
   optionsApi?: string;
   dependsOn: any[];
@@ -91,6 +92,8 @@ export interface QuestionTemplate {
   label: string;
   answerType: AnswerType;
   validationJson: Record<string, any>;
+  defaultValue?: string;
+  storageMetadata?: Record<string, any>;
   helperText?: string;
   availableRegions: number[];
   createdBy: string;
@@ -197,12 +200,15 @@ export interface CreateQuestionRequest {
   required?: boolean;
   validation?: Record<string, any>;
   visibleIf?: any[];
+  visibleIfJson?: Record<string, any>;
   defaultValue?: string;
   optionsApi?: string;
   dependsOn?: any[];
   options?: any[];
   storage?: Record<string, any>;
   order?: number;
+  status?: string;
+  etag?: string;
 }
 
 export interface UpdateQuestionRequest {
@@ -213,12 +219,15 @@ export interface UpdateQuestionRequest {
   required?: boolean;
   validation?: Record<string, any>;
   visibleIf?: any[];
+  visibleIfJson?: Record<string, any>;
   defaultValue?: string;
   optionsApi?: string;
   dependsOn?: any[];
   options?: any[];
   storage?: Record<string, any>;
   order?: number;
+  status?: string;
+  etag?: string;
 }
 
 // Version Control
@@ -248,6 +257,19 @@ export interface AuditEntry {
   changes: Record<string, any>;
   userId: string;
   timestamp: string;
+}
+
+// Form History
+export interface FormHistoryEntry {
+  id: number;
+  formId: number;
+  version: number;
+  action: "created" | "updated" | "published" | "unpublished" | "archived";
+  changes?: Record<string, any>;
+  userId: string;
+  userName?: string;
+  timestamp: string;
+  description?: string;
 }
 
 // Question Usage Tracking

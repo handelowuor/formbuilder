@@ -17,6 +17,7 @@ import {
   QuestionTemplate,
   FormQuestionUsage,
   ValidationConfig,
+  FormHistoryEntry,
 } from "@/types/form-builder";
 import {
   testRegions,
@@ -242,6 +243,82 @@ export const formApi = {
   // Get form audit trail
   async getFormAudit(id: number): Promise<ApiResponse<AuditEntry[]>> {
     return apiClient.get<AuditEntry[]>(`/forms/${id}/audit`);
+  },
+
+  // Get form history
+  async getFormHistory(id: number): Promise<ApiResponse<FormHistoryEntry[]>> {
+    // Mock form history data
+    const mockHistory: FormHistoryEntry[] = [
+      {
+        id: 1,
+        formId: id,
+        version: 1,
+        action: "created",
+        userId: "admin",
+        userName: "Admin User",
+        timestamp: "2024-01-15T10:00:00Z",
+        description: "Form created",
+      },
+      {
+        id: 2,
+        formId: id,
+        version: 2,
+        action: "updated",
+        changes: {
+          name: "Updated form name",
+          description: "Updated description",
+        },
+        userId: "admin",
+        userName: "Admin User",
+        timestamp: "2024-01-20T14:30:00Z",
+        description: "Form details updated",
+      },
+      {
+        id: 3,
+        formId: id,
+        version: 3,
+        action: "published",
+        userId: "admin",
+        userName: "Admin User",
+        timestamp: "2024-01-21T09:15:00Z",
+        description: "Form published and made live",
+      },
+    ];
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    return {
+      status: "success",
+      data: mockHistory,
+    };
+  },
+
+  // Archive form
+  async archiveForm(id: number): Promise<ApiResponse<void>> {
+    const formIndex = testForms.findIndex((f) => f.id === id);
+    if (formIndex === -1) {
+      return {
+        status: false,
+        code: "FORM_NOT_FOUND",
+        message: "Form not found",
+      };
+    }
+
+    // Update form status to archived
+    testForms[formIndex] = {
+      ...testForms[formIndex],
+      status: "archived",
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    return {
+      status: "success",
+      data: undefined,
+    };
   },
 };
 
@@ -674,14 +751,15 @@ export const questionApi = {
       required: data.required || false,
       validation: data.validation || {},
       visibleIf: data.visibleIf || [],
+      visibleIfJson: data.visibleIfJson || {},
       defaultValue: data.defaultValue,
       optionsApi: data.optionsApi,
       dependsOn: data.dependsOn || [],
       options: data.options || [],
       storage: data.storage,
-      status: "draft",
+      status: data.status || "draft",
       legacyStatus: "active",
-      etag: `etag-q${Date.now()}`,
+      etag: data.etag || `etag-q${Date.now()}`,
       version: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -883,11 +961,12 @@ export const questionApi = {
       required: false,
       validation: template.validationJson,
       visibleIf: [],
-      defaultValue: undefined,
+      visibleIfJson: {},
+      defaultValue: template.defaultValue,
       optionsApi: undefined,
       dependsOn: [],
       options: [],
-      storage: undefined,
+      storage: template.storageMetadata,
       status: "draft",
       legacyStatus: "active",
       etag: `etag-q${Date.now()}`,

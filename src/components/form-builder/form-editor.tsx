@@ -1,7 +1,27 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Save, Eye, Plus, Settings, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Eye,
+  Plus,
+  Settings,
+  Trash2,
+  History,
+  Archive,
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Form,
   FormField,
@@ -16,6 +37,7 @@ import {
   FormQuestion,
   QuestionTemplate,
   CompanyRegion,
+  FormHistoryEntry,
 } from "@/types/form-builder";
 import { FieldTypeSelector } from "./field-type-selector";
 import { FieldConfigurationPanel } from "./field-configuration-panel";
@@ -24,6 +46,7 @@ import { SectionManager } from "./section-manager";
 import {
   sectionApi,
   questionApi,
+  formApi,
   handleApiError,
 } from "@/lib/api/form-builder-api";
 
@@ -42,6 +65,7 @@ export function FormEditor({
   selectedRegion,
   availableTemplates = [],
 }: FormEditorProps) {
+  const { toast } = useToast();
   const [currentForm, setCurrentForm] = useState<Form>({
     ...form,
     fields: form.fields || [],
@@ -53,6 +77,12 @@ export function FormEditor({
   const [sections, setSections] = useState<FormSection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [formHistory, setFormHistory] = useState<FormHistoryEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Load sections when component mounts
   useEffect(() => {
@@ -72,6 +102,22 @@ export function FormEditor({
       setError("Failed to load sections");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadFormHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const response = await formApi.getFormHistory(form.id);
+      if (response.status === "success" && response.data) {
+        setFormHistory(response.data);
+      } else {
+        setError(handleApiError(response));
+      }
+    } catch (err) {
+      setError("Failed to load form history");
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -136,16 +182,91 @@ export function FormEditor({
   };
 
   const handleSave = () => {
-    onSave(currentForm);
+    setShowSaveConfirm(true);
+  };
+
+  const confirmSave = () => {
+    try {
+      onSave(currentForm);
+      setShowSaveConfirm(false);
+      toast({
+        title: "Success",
+        description: "Form saved as draft successfully!",
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save form. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePublish = () => {
-    const publishedForm = {
-      ...currentForm,
-      status: "active" as const,
-      updatedAt: new Date().toISOString(),
-    };
-    onSave(publishedForm);
+    setShowPublishConfirm(true);
+  };
+
+  const confirmPublish = () => {
+    try {
+      const publishedForm = {
+        ...currentForm,
+        status: "active" as const,
+        updatedAt: new Date().toISOString(),
+      };
+      onSave(publishedForm);
+      setShowPublishConfirm(false);
+      toast({
+        title: "Success",
+        description:
+          "Form published successfully! It is now live and available to users.",
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to publish form. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleArchive = () => {
+    setShowArchiveConfirm(true);
+  };
+
+  const confirmArchive = async () => {
+    try {
+      const response = await formApi.archiveForm(currentForm.id);
+      if (response.status === "success") {
+        setShowArchiveConfirm(false);
+        toast({
+          title: "Success",
+          description: "Form archived successfully!",
+          variant: "default",
+        });
+        // Navigate back to dashboard after archiving
+        setTimeout(() => onBack(), 1000);
+      } else {
+        const errorMsg = handleApiError(response);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to archive form. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleShowHistory = () => {
+    setShowHistoryDialog(true);
+    loadFormHistory();
   };
 
   if (showPreview) {
@@ -186,6 +307,10 @@ export function FormEditor({
             </div>
 
             <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleShowHistory}>
+                <History className="w-4 h-4 mr-2" />
+                History
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -200,6 +325,15 @@ export function FormEditor({
               </Button>
               <Button size="sm" onClick={handlePublish}>
                 Publish Form
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleArchive}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Archive className="w-4 h-4 mr-2" />
+                Archive
               </Button>
             </div>
           </div>
@@ -357,6 +491,166 @@ export function FormEditor({
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Confirmation Dialog */}
+      <AlertDialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save Form as Draft</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to save this form as a draft? Your changes
+              will be preserved but the form will not be published yet.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSave}>
+              Save Draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Publish Confirmation Dialog */}
+      <AlertDialog
+        open={showPublishConfirm}
+        onOpenChange={setShowPublishConfirm}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Publish Form</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to publish this form? Once published, it
+              will be live and available to users. You can still make changes
+              later, but they will require republishing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPublish}>
+              Publish Form
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Archive Confirmation Dialog */}
+      <AlertDialog
+        open={showArchiveConfirm}
+        onOpenChange={setShowArchiveConfirm}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive Form</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive this form? Archived forms are no
+              longer active and cannot be used by users. This action can be
+              reversed later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmArchive}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Archive Form
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Form History Dialog */}
+      {showHistoryDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold flex items-center">
+                <History className="w-5 h-5 mr-2" />
+                Form History
+              </h2>
+              <Button
+                variant="ghost"
+                onClick={() => setShowHistoryDialog(false)}
+              >
+                ×
+              </Button>
+            </div>
+
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {loadingHistory ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-slate-500 dark:text-slate-400">
+                    Loading form history...
+                  </p>
+                </div>
+              ) : formHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    No history available for this form.
+                  </p>
+                </div>
+              ) : (
+                formHistory.map((entry) => (
+                  <Card key={entry.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Badge
+                            variant={
+                              entry.action === "created"
+                                ? "default"
+                                : entry.action === "published"
+                                  ? "default"
+                                  : entry.action === "archived"
+                                    ? "destructive"
+                                    : "secondary"
+                            }
+                          >
+                            {entry.action}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            v{entry.version}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            by {entry.userName || entry.userId}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium mb-1">
+                          {entry.description}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(entry.timestamp).toLocaleString()}
+                        </p>
+                        {entry.changes &&
+                          Object.keys(entry.changes).length > 0 && (
+                            <div className="mt-2 p-2 bg-muted rounded text-xs">
+                              <strong>Changes:</strong>
+                              <ul className="mt-1 space-y-1">
+                                {Object.entries(entry.changes).map(
+                                  ([key, value]) => (
+                                    <li key={key}>
+                                      <span className="font-medium">
+                                        {key}:
+                                      </span>{" "}
+                                      {String(value)}
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              )}
             </div>
           </div>
         </div>

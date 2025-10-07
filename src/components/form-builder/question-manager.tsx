@@ -11,7 +11,11 @@ import {
   Settings,
   Search,
   Filter,
+  CheckCircle,
+  AlertCircle,
+  Archive,
 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +75,7 @@ export function QuestionManager({
   onQuestionsChange,
   onError,
 }: QuestionManagerProps) {
+  const { toast } = useToast();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
@@ -144,15 +149,34 @@ export function QuestionManager({
       const response = await questionApi.createQuestion(formId, {
         ...data,
         sectionId,
+        status: "draft",
+        etag: `etag-${Date.now()}`,
       });
       if (response.status === "success" && response.data) {
         onQuestionsChange([...questions, response.data]);
         setShowCreateDialog(false);
+        toast({
+          title: "Success",
+          description: "Question created successfully!",
+          variant: "default",
+        });
       } else {
-        onError(handleApiError(response));
+        const errorMsg = handleApiError(response);
+        onError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      onError("Failed to create question");
+      const errorMsg = "Failed to create question";
+      onError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -164,24 +188,48 @@ export function QuestionManager({
   ) => {
     setIsLoading(true);
     try {
-      const response = await questionApi.updateQuestion(questionId, data);
+      const response = await questionApi.updateQuestion(questionId, {
+        ...data,
+        etag: `etag-${Date.now()}`,
+      });
       if (response.status === "success" && response.data) {
         onQuestionsChange(
           questions.map((q) => (q.id === questionId ? response.data! : q)),
         );
         setEditingQuestion(null);
+        toast({
+          title: "Success",
+          description: "Question updated successfully!",
+          variant: "default",
+        });
       } else {
-        onError(handleApiError(response));
+        const errorMsg = handleApiError(response);
+        onError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      onError("Failed to update question");
+      const errorMsg = "Failed to update question";
+      onError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteQuestion = async (questionId: number) => {
-    if (!confirm("Are you sure you want to delete this question?")) {
+    if (
+      !confirm(
+        "Are you sure you want to archive this question? This action can be reversed later if needed.",
+      )
+    ) {
       return;
     }
 
@@ -190,11 +238,28 @@ export function QuestionManager({
       const response = await questionApi.archiveQuestion(questionId);
       if (response.status === "success") {
         onQuestionsChange(questions.filter((q) => q.id !== questionId));
+        toast({
+          title: "Success",
+          description: "Question archived successfully!",
+          variant: "default",
+        });
       } else {
-        onError(handleApiError(response));
+        const errorMsg = handleApiError(response);
+        onError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      onError("Failed to delete question");
+      const errorMsg = "Failed to archive question";
+      onError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -215,11 +280,28 @@ export function QuestionManager({
         onQuestionsChange(questions.filter((q) => q.id !== questionId));
         setShowMoveDialog(false);
         setMovingQuestion(null);
+        toast({
+          title: "Success",
+          description: "Question moved successfully!",
+          variant: "default",
+        });
       } else {
-        onError(handleApiError(response));
+        const errorMsg = handleApiError(response);
+        onError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      onError("Failed to move question");
+      const errorMsg = "Failed to move question";
+      onError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -236,11 +318,28 @@ export function QuestionManager({
       if (response.status === "success" && response.data) {
         onQuestionsChange([...questions, response.data]);
         setShowTemplateLibrary(false);
+        toast({
+          title: "Success",
+          description: "Question added from template successfully!",
+          variant: "default",
+        });
       } else {
-        onError(handleApiError(response));
+        const errorMsg = handleApiError(response);
+        onError(errorMsg);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      onError("Failed to copy question from template");
+      const errorMsg = "Failed to copy question from template";
+      onError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -362,8 +461,9 @@ export function QuestionManager({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteQuestion(question.id)}
+                      className="text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Archive className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -410,49 +510,72 @@ export function QuestionManager({
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-              {templates
-                .filter(
-                  (template) =>
-                    template.label
-                      .toLowerCase()
-                      .includes(templateSearch.toLowerCase()) ||
-                    template.tkey
-                      .toLowerCase()
-                      .includes(templateSearch.toLowerCase()),
-                )
-                .map((template) => (
-                  <Card
-                    key={template.id}
-                    className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleCopyFromTemplate(template.id)}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">{template.label}</h4>
-                        <Badge
-                          className={getAnswerTypeColor(template.answerType)}
-                        >
-                          {template.answerType}
-                        </Badge>
-                      </div>
-                      {template.helperText && (
-                        <p className="text-sm text-muted-foreground">
-                          {template.helperText}
-                        </p>
-                      )}
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className="text-xs">
-                          {template.tkey}
-                        </Badge>
-                        {template.category && (
-                          <Badge variant="secondary" className="text-xs">
-                            {template.category}
+              {templates.length === 0 ? (
+                <div className="col-span-2 text-center py-8">
+                  <Library className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    Loading question templates...
+                  </p>
+                </div>
+              ) : (
+                templates
+                  .filter(
+                    (template) =>
+                      template.label
+                        .toLowerCase()
+                        .includes(templateSearch.toLowerCase()) ||
+                      template.tkey
+                        .toLowerCase()
+                        .includes(templateSearch.toLowerCase()),
+                  )
+                  .map((template) => (
+                    <Card
+                      key={template.id}
+                      className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => handleCopyFromTemplate(template.id)}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">{template.label}</h4>
+                          <Badge
+                            className={getAnswerTypeColor(template.answerType)}
+                          >
+                            {template.answerType}
                           </Badge>
+                        </div>
+                        {template.helperText && (
+                          <p className="text-sm text-muted-foreground">
+                            {template.helperText}
+                          </p>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline" className="text-xs">
+                            {template.tkey}
+                          </Badge>
+                          {template.category && (
+                            <Badge variant="secondary" className="text-xs">
+                              {template.category}
+                            </Badge>
+                          )}
+                          {template.defaultValue && (
+                            <Badge variant="outline" className="text-xs">
+                              Default: {template.defaultValue}
+                            </Badge>
+                          )}
+                        </div>
+                        {template.storageMetadata && (
+                          <div className="text-xs text-muted-foreground">
+                            Storage:{" "}
+                            {template.storageMetadata.encrypted
+                              ? "Encrypted"
+                              : "Plain"}
+                            {template.storageMetadata.indexed && ", Indexed"}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  ))
+              )}
             </div>
           </div>
         </DialogContent>
@@ -532,6 +655,10 @@ function QuestionDialog({
     answerType: (initialData?.answerType || "text") as AnswerType,
     required: initialData?.required || false,
     order: initialData?.order || 1,
+    visibleIfJson: initialData?.visibleIfJson || {},
+    optionsApi: initialData?.optionsApi || "",
+    dependsOn: initialData?.dependsOn || [],
+    status: initialData?.status || "draft",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -547,6 +674,10 @@ function QuestionDialog({
       answerType: formData.answerType,
       required: formData.required,
       order: formData.order,
+      visibleIfJson: formData.visibleIfJson,
+      optionsApi: formData.optionsApi.trim() || undefined,
+      dependsOn: formData.dependsOn,
+      status: formData.status,
       sectionId: 0, // Will be set by parent
     });
   };
@@ -628,6 +759,36 @@ function QuestionDialog({
               }
             />
             <Label htmlFor="question-required">Required Question</Label>
+          </div>
+          <div>
+            <Label htmlFor="question-options-api">Options API (Optional)</Label>
+            <Input
+              id="question-options-api"
+              value={formData.optionsApi}
+              onChange={(e) =>
+                setFormData({ ...formData, optionsApi: e.target.value })
+              }
+              placeholder="API endpoint for dynamic options"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="question-status">Status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) =>
+                setFormData({ ...formData, status: value })
+              }
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button
