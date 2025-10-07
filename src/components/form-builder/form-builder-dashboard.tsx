@@ -79,54 +79,15 @@ export function FormBuilderDashboard({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Multi-country support - Updated to support multiple countries
-  const [selectedCountries, setSelectedCountries] = useState<CountryCode[]>([
-    defaultCountry,
-  ]);
-  const [selectedRegions, setSelectedRegions] = useState<number[]>([
-    companyRegionId,
-  ]);
-  const [availableRegions, setAvailableRegions] = useState<CompanyRegion[]>([]);
+  // Country support - simplified to just country selection
+  const [selectedCountry, setSelectedCountry] =
+    useState<CountryCode>(defaultCountry);
   const [templateCount, setTemplateCount] = useState(0);
 
-  // Load all regions
-  const loadAllRegions = async () => {
-    try {
-      const response = await regionApi.getRegions();
-      if (response.status === "success" && response.data) {
-        setAvailableRegions(response.data);
-
-        // Filter regions based on selected countries
-        const filteredRegions = response.data.filter((r) =>
-          selectedCountries.includes(r.countryCode),
-        );
-
-        // Update selected regions to only include those from selected countries
-        const validRegions = selectedRegions.filter((regionId) =>
-          filteredRegions.some((r) => r.id === regionId),
-        );
-
-        if (validRegions.length === 0 && filteredRegions.length > 0) {
-          // If no valid regions, select the first available region from each country
-          const defaultRegions = selectedCountries
-            .map((country) => {
-              const countryRegions = filteredRegions.filter(
-                (r) => r.countryCode === country,
-              );
-              return (
-                countryRegions.find((r) => r.isActive)?.id ||
-                countryRegions[0]?.id
-              );
-            })
-            .filter(Boolean) as number[];
-          setSelectedRegions(defaultRegions);
-        } else {
-          setSelectedRegions(validRegions);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load regions:", err);
-    }
+  // Get company region ID based on selected country
+  const getCompanyRegionId = (country: CountryCode): number => {
+    // Map country codes to region IDs
+    return country === "UG" ? 1 : 5; // Uganda: 1, Kenya: 5
   };
 
   // Load forms from API
@@ -135,8 +96,9 @@ export function FormBuilderDashboard({
     setError(null);
 
     try {
-      // Load forms for all selected regions
-      const formPromises = selectedRegions.map((regionId) =>
+      const regionId = getCompanyRegionId(selectedCountry);
+
+      const [formResponse, templateResponse] = await Promise.all([
         formApi.listForms({
           page: currentPage,
           limit: 20,
@@ -144,49 +106,21 @@ export function FormBuilderDashboard({
           ...(statusFilter !== "all" && { status: statusFilter }),
           ...(typeFilter !== "all" && { formType: typeFilter }),
         }),
-      );
-
-      const templatePromises = selectedRegions.map((regionId) =>
         templateApi.listTemplates({
           regionId,
           page: 1,
           limit: 1, // Just to get count
         }),
-      );
-
-      const [formResponses, templateResponses] = await Promise.all([
-        Promise.all(formPromises),
-        Promise.all(templatePromises),
       ]);
 
-      // Combine forms from all regions
-      const allForms: Form[] = [];
-      let totalFormsCount = 0;
+      if (formResponse.status === "success" && formResponse.data) {
+        setForms(formResponse.data.rows);
+        setTotalCount(formResponse.data.count);
+      }
 
-      formResponses.forEach((response) => {
-        if (response.status === "success" && response.data) {
-          allForms.push(...response.data.rows);
-          totalFormsCount += response.data.count;
-        }
-      });
-
-      // Remove duplicates based on form ID
-      const uniqueForms = allForms.filter(
-        (form, index, self) =>
-          index === self.findIndex((f) => f.id === form.id),
-      );
-
-      setForms(uniqueForms);
-      setTotalCount(totalFormsCount);
-
-      // Calculate total template count
-      let totalTemplatesCount = 0;
-      templateResponses.forEach((response) => {
-        if (response.status === "success" && response.data) {
-          totalTemplatesCount += response.data.count;
-        }
-      });
-      setTemplateCount(totalTemplatesCount);
+      if (templateResponse.status === "success" && templateResponse.data) {
+        setTemplateCount(templateResponse.data.count);
+      }
     } catch (err) {
       setError("Failed to load forms. Please try again.");
     } finally {
@@ -195,29 +129,11 @@ export function FormBuilderDashboard({
   };
 
   useEffect(() => {
-    loadAllRegions();
-  }, [selectedCountries]);
+    loadForms();
+  }, [currentPage, statusFilter, typeFilter, selectedCountry]);
 
-  useEffect(() => {
-    if (selectedRegions.length > 0) {
-      loadForms();
-    }
-  }, [currentPage, statusFilter, typeFilter, selectedRegions]);
-
-  const handleCountryChange = (country: CountryCode, checked: boolean) => {
-    if (checked) {
-      setSelectedCountries((prev) => [...prev, country]);
-    } else {
-      setSelectedCountries((prev) => prev.filter((c) => c !== country));
-    }
-  };
-
-  const handleRegionChange = (regionId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedRegions((prev) => [...prev, regionId]);
-    } else {
-      setSelectedRegions((prev) => prev.filter((r) => r !== regionId));
-    }
+  const handleCountryChange = (country: CountryCode) => {
+    setSelectedCountry(country);
   };
 
   const handleCreateForm = async () => {
@@ -226,7 +142,7 @@ export function FormBuilderDashboard({
         name: "New Form",
         description: "A new form created with the form builder",
         formType: "cds1",
-        companyRegionId: selectedRegions[0] || 1,
+        companyRegionId: getCompanyRegionId(selectedCountry),
         status: "active",
       });
 
@@ -339,79 +255,26 @@ export function FormBuilderDashboard({
                 validation and dependencies
               </p>
 
-              {/* Multi-Country and Region Selection */}
-              <div className="flex flex-col space-y-4 mt-4">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <Globe className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Countries:</span>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="country-ug"
-                        checked={selectedCountries.includes("UG")}
-                        onCheckedChange={(checked) =>
-                          handleCountryChange("UG", checked as boolean)
-                        }
-                      />
-                      <label
-                        htmlFor="country-ug"
-                        className="text-sm cursor-pointer"
-                      >
-                        🇺🇬 Uganda
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="country-ke"
-                        checked={selectedCountries.includes("KE")}
-                        onCheckedChange={(checked) =>
-                          handleCountryChange("KE", checked as boolean)
-                        }
-                      />
-                      <label
-                        htmlFor="country-ke"
-                        className="text-sm cursor-pointer"
-                      >
-                        🇰🇪 Kenya
-                      </label>
-                    </div>
-                  </div>
+              {/* Country Selection */}
+              <div className="flex items-center space-x-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Country:</span>
                 </div>
-
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Regions:</span>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    {availableRegions
-                      .filter((region) =>
-                        selectedCountries.includes(region.countryCode),
-                      )
-                      .map((region) => (
-                        <div
-                          key={region.id}
-                          className="flex items-center space-x-2"
-                        >
-                          <Checkbox
-                            id={`region-${region.id}`}
-                            checked={selectedRegions.includes(region.id)}
-                            onCheckedChange={(checked) =>
-                              handleRegionChange(region.id, checked as boolean)
-                            }
-                          />
-                          <label
-                            htmlFor={`region-${region.id}`}
-                            className="text-sm cursor-pointer"
-                          >
-                            {region.name}
-                          </label>
-                        </div>
-                      ))}
-                  </div>
-                </div>
+                <Select
+                  value={selectedCountry}
+                  onValueChange={(value) =>
+                    handleCountryChange(value as CountryCode)
+                  }
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UG">🇺🇬 Uganda</SelectItem>
+                    <SelectItem value="KE">🇰🇪 Kenya</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -422,7 +285,6 @@ export function FormBuilderDashboard({
               <Button
                 onClick={handleCreateForm}
                 className="form-builder-button-primary"
-                disabled={selectedRegions.length === 0}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create Form
@@ -613,10 +475,7 @@ export function FormBuilderDashboard({
                     : "Create your first form to get started"}
                 </p>
                 {!searchQuery && (
-                  <Button
-                    onClick={handleCreateForm}
-                    disabled={selectedRegions.length === 0}
-                  >
+                  <Button onClick={handleCreateForm}>
                     <Plus className="w-4 h-4 mr-2" />
                     Create Your First Form
                   </Button>
@@ -675,7 +534,12 @@ export function FormBuilderDashboard({
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <div className="flex items-center space-x-4">
                           <span>ID: {form.id}</span>
-                          <span>Region: {form.companyRegionId}</span>
+                          <span>
+                            Country:{" "}
+                            {form.companyRegionId === 1
+                              ? "🇺🇬 Uganda"
+                              : "🇰🇪 Kenya"}
+                          </span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Clock className="w-3 h-3" />

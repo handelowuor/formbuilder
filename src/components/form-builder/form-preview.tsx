@@ -1,16 +1,22 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { ArrowLeft, Send, Eye } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Form, FormField } from '@/types/form-builder';
+import { useState } from "react";
+import { ArrowLeft, Send, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Form, FormField } from "@/types/form-builder";
 
 interface FormPreviewProps {
   form: Form;
@@ -22,41 +28,47 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleFieldChange = (fieldId: string, value: any) => {
-    setFormData(prev => ({ ...prev, [fieldId]: value }));
+    setFormData((prev) => ({ ...prev, [fieldId]: value }));
     // Clear error when user starts typing
     if (errors[fieldId]) {
-      setErrors(prev => ({ ...prev, [fieldId]: '' }));
+      setErrors((prev) => ({ ...prev, [fieldId]: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    form.fields.forEach(field => {
+    (form.fields || []).forEach((field) => {
       const value = formData[field.id];
 
       // Required field validation
-      if (field.required && (!value || value === '')) {
+      if (field.required && (!value || value === "")) {
         newErrors[field.id] = `${field.label} is required`;
         return;
       }
 
       // Type-specific validation
       if (value) {
-        field.validationRules.forEach(rule => {
+        field.validationRules.forEach((rule) => {
           switch (rule.type) {
-            case 'minLength':
-              if (typeof value === 'string' && value.length < (rule.value as number)) {
+            case "minLength":
+              if (
+                typeof value === "string" &&
+                value.length < (rule.value as number)
+              ) {
                 newErrors[field.id] = rule.message;
               }
               break;
-            case 'maxLength':
-              if (typeof value === 'string' && value.length > (rule.value as number)) {
+            case "maxLength":
+              if (
+                typeof value === "string" &&
+                value.length > (rule.value as number)
+              ) {
                 newErrors[field.id] = rule.message;
               }
               break;
-            case 'pattern':
-              if (typeof value === 'string' && rule.value) {
+            case "pattern":
+              if (typeof value === "string" && rule.value) {
                 const regex = new RegExp(rule.value as string);
                 if (!regex.test(value)) {
                   newErrors[field.id] = rule.message;
@@ -67,7 +79,7 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
         });
 
         // Number field validation
-        if (field.type === 'number') {
+        if (field.type === "number") {
           const numValue = Number(value);
           if (field.minValue !== undefined && numValue < field.minValue) {
             newErrors[field.id] = `Value must be at least ${field.minValue}`;
@@ -86,13 +98,13 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      console.log('Form submitted:', formData);
-      alert('Form submitted successfully!');
+      console.log("Form submitted:", formData);
+      alert("Form submitted successfully!");
     }
   };
 
   const renderField = (field: FormField) => {
-    const value = formData[field.id] || field.defaultValue || '';
+    const value = formData[field.id] || field.defaultValue || "";
     const error = errors[field.id];
 
     const fieldWrapper = (children: React.ReactNode) => (
@@ -102,27 +114,27 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
           {field.required && <span className="text-red-500">*</span>}
         </Label>
         {field.helpText && (
-          <p className="text-sm text-slate-500 dark:text-slate-400">{field.helpText}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {field.helpText}
+          </p>
         )}
         {children}
-        {error && (
-          <p className="text-sm text-red-500">{error}</p>
-        )}
+        {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
     );
 
     switch (field.type) {
-      case 'text':
+      case "text":
         return fieldWrapper(
           <Input
             id={field.id}
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            className={error ? 'border-red-500' : ''}
-          />
+            className={error ? "border-red-500" : ""}
+          />,
         );
 
-      case 'number':
+      case "number":
         return fieldWrapper(
           <Input
             id={field.id}
@@ -131,17 +143,17 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
             min={field.minValue}
             max={field.maxValue}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            className={error ? 'border-red-500' : ''}
-          />
+            className={error ? "border-red-500" : ""}
+          />,
         );
 
-      case 'dropdown':
+      case "dropdown":
         return fieldWrapper(
           <Select
             value={value}
             onValueChange={(val) => handleFieldChange(field.id, val)}
           >
-            <SelectTrigger className={error ? 'border-red-500' : ''}>
+            <SelectTrigger className={error ? "border-red-500" : ""}>
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
             <SelectContent>
@@ -151,51 +163,53 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+          </Select>,
         );
 
-      case 'checkbox':
+      case "checkbox":
         return fieldWrapper(
           <div className="flex items-center space-x-2">
             <Checkbox
               id={field.id}
               checked={value === true}
-              onCheckedChange={(checked) => handleFieldChange(field.id, checked)}
+              onCheckedChange={(checked) =>
+                handleFieldChange(field.id, checked)
+              }
             />
             <Label htmlFor={field.id} className="text-sm font-normal">
               {field.label}
             </Label>
-          </div>
+          </div>,
         );
 
-      case 'date':
+      case "date":
         return fieldWrapper(
           <Input
             id={field.id}
             type="date"
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            className={error ? 'border-red-500' : ''}
-          />
+            className={error ? "border-red-500" : ""}
+          />,
         );
 
-      case 'lookup':
+      case "lookup":
         return fieldWrapper(
           <div className="space-y-2">
             <Input
               id={field.id}
               value={value}
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
-              placeholder={`Search ${field.lookupObject || 'records'}...`}
-              className={error ? 'border-red-500' : ''}
+              placeholder={`Search ${field.lookupObject || "records"}...`}
+              className={error ? "border-red-500" : ""}
             />
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Lookup: {field.lookupObject} → {field.lookupField}
             </p>
-          </div>
+          </div>,
         );
 
-      case 'formula':
+      case "formula":
         return fieldWrapper(
           <div className="space-y-2">
             <Input
@@ -207,7 +221,7 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Formula: {field.formula}
             </p>
-          </div>
+          </div>,
         );
 
       default:
@@ -216,8 +230,8 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
             id={field.id}
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            className={error ? 'border-red-500' : ''}
-          />
+            className={error ? "border-red-500" : ""}
+          />,
         );
     }
   };
@@ -258,12 +272,14 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
             <CardHeader>
               <CardTitle className="text-2xl">{form.name}</CardTitle>
               {form.description && (
-                <p className="text-slate-600 dark:text-slate-400">{form.description}</p>
+                <p className="text-slate-600 dark:text-slate-400">
+                  {form.description}
+                </p>
               )}
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                {form.fields.map(renderField)}
+                {(form.fields || []).map(renderField)}
 
                 <div className="flex justify-end space-x-4 pt-6 border-t">
                   <Button type="button" variant="outline" onClick={onBack}>
@@ -287,21 +303,30 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium">Total Fields:</span>
-                  <span className="ml-2">{form.fields.length}</span>
+                  <span className="ml-2">{form.fields?.length || 0}</span>
                 </div>
                 <div>
                   <span className="font-medium">Required Fields:</span>
-                  <span className="ml-2">{form.fields.filter(f => f.required).length}</span>
+                  <span className="ml-2">
+                    {(form.fields || []).filter((f) => f.required).length}
+                  </span>
                 </div>
                 <div>
                   <span className="font-medium">Status:</span>
-                  <Badge variant={form.status === 'published' ? 'default' : 'secondary'} className="ml-2">
+                  <Badge
+                    variant={
+                      form.status === "published" ? "default" : "secondary"
+                    }
+                    className="ml-2"
+                  >
                     {form.status}
                   </Badge>
                 </div>
                 <div>
                   <span className="font-medium">Last Updated:</span>
-                  <span className="ml-2">{form.updatedAt.toLocaleDateString()}</span>
+                  <span className="ml-2">
+                    {new Date(form.updatedAt).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             </CardContent>

@@ -115,6 +115,18 @@ export interface FormField {
   lookupObject?: string;
   lookupField?: string;
   templateId?: number;
+  isFromTemplate?: boolean;
+  validationRules: ValidationRule[];
+  dependencies: any[];
+  useGlobalValueSet?: boolean;
+}
+
+// Validation Rule
+export interface ValidationRule {
+  id: string;
+  type: "required" | "minLength" | "maxLength" | "pattern" | "custom";
+  value?: string | number;
+  message: string;
 }
 
 // Picklist Value
@@ -122,7 +134,7 @@ export interface PicklistValue {
   id: string;
   label: string;
   value: string;
-  order: number;
+  order?: number;
   isDefault?: boolean;
 }
 

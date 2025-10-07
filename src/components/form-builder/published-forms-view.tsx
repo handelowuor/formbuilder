@@ -1,12 +1,25 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { ArrowLeft, Eye, Download, BarChart3, Settings, Copy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Form } from '@/types/form-builder';
+import { useState } from "react";
+import {
+  ArrowLeft,
+  Eye,
+  Download,
+  BarChart3,
+  Settings,
+  Copy,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Form } from "@/types/form-builder";
 
 interface PublishedFormsViewProps {
   forms: Form[];
@@ -19,8 +32,8 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
   const mockAnalytics = {
     totalSubmissions: 1247,
     thisMonth: 89,
-    averageCompletionTime: '3m 42s',
-    completionRate: 87.3
+    averageCompletionTime: "3m 42s",
+    completionRate: 87.3,
   };
 
   if (selectedForm) {
@@ -31,7 +44,11 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
           <div className="container mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="sm" onClick={() => setSelectedForm(null)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedForm(null)}
+                >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Published Forms
                 </Button>
@@ -42,12 +59,12 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
                   <div className="flex items-center space-x-2 mt-1">
                     <Badge variant="default">Published</Badge>
                     <span className="text-sm text-slate-500 dark:text-slate-400">
-                      {selectedForm.fields.length} fields
+                      {selectedForm.fields?.length || 0} fields
                     </span>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Button variant="outline" size="sm">
                   <Copy className="w-4 h-4 mr-2" />
@@ -82,7 +99,9 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
                     <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                       {mockAnalytics.totalSubmissions.toLocaleString()}
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Total Submissions</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Total Submissions
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -90,7 +109,9 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
                     <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                       {mockAnalytics.thisMonth}
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">This Month</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      This Month
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -98,7 +119,9 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {mockAnalytics.averageCompletionTime}
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Avg. Completion Time</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Avg. Completion Time
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -106,7 +129,9 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                       {mockAnalytics.completionRate}%
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Completion Rate</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Completion Rate
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -121,7 +146,9 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
                     <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
                       <div className="text-center">
                         <BarChart3 className="w-12 h-12 text-slate-400 mx-auto mb-2" />
-                        <p className="text-slate-500 dark:text-slate-400">Chart visualization would go here</p>
+                        <p className="text-slate-500 dark:text-slate-400">
+                          Chart visualization would go here
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -133,22 +160,29 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {selectedForm.fields.slice(0, 5).map((field, index) => (
-                        <div key={field.id} className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{field.label}</span>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-24 h-2 bg-slate-200 dark:bg-slate-700 rounded-full">
-                              <div 
-                                className="h-2 bg-primary rounded-full" 
-                                style={{ width: `${95 - index * 5}%` }}
-                              />
-                            </div>
-                            <span className="text-sm text-slate-500 dark:text-slate-400">
-                              {95 - index * 5}%
+                      {(selectedForm.fields || [])
+                        .slice(0, 5)
+                        .map((field, index) => (
+                          <div
+                            key={field.id}
+                            className="flex items-center justify-between"
+                          >
+                            <span className="text-sm font-medium">
+                              {field.label}
                             </span>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-24 h-2 bg-slate-200 dark:bg-slate-700 rounded-full">
+                                <div
+                                  className="h-2 bg-primary rounded-full"
+                                  style={{ width: `${95 - index * 5}%` }}
+                                />
+                              </div>
+                              <span className="text-sm text-slate-500 dark:text-slate-400">
+                                {95 - index * 5}%
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -159,12 +193,17 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Submissions</CardTitle>
-                  <CardDescription>Latest form submissions and their status</CardDescription>
+                  <CardDescription>
+                    Latest form submissions and their status
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
                         <div>
                           <p className="font-medium">Submission #{1000 + i}</p>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -188,7 +227,9 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
               <Card>
                 <CardHeader>
                   <CardTitle>Form Settings</CardTitle>
-                  <CardDescription>Configure form behavior and notifications</CardDescription>
+                  <CardDescription>
+                    Configure form behavior and notifications
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -265,24 +306,24 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
             <p className="text-slate-500 dark:text-slate-400 mb-4">
               Publish a form to see it here and start collecting submissions
             </p>
-            <Button onClick={onBack}>
-              Go to Dashboard
-            </Button>
+            <Button onClick={onBack}>Go to Dashboard</Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {forms.map((form) => (
-              <Card 
-                key={form.id} 
+              <Card
+                key={form.id}
                 className="hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => setSelectedForm(form)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg mb-2">{form.name}</CardTitle>
+                      <CardTitle className="text-lg mb-2">
+                        {form.name}
+                      </CardTitle>
                       <CardDescription className="text-sm mb-3">
-                        {form.description || 'No description provided'}
+                        {form.description || "No description provided"}
                       </CardDescription>
                     </div>
                     <Badge variant="default">Published</Badge>
@@ -291,16 +332,28 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500 dark:text-slate-400">Fields:</span>
-                      <span className="font-medium">{form.fields.length}</span>
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Fields:
+                      </span>
+                      <span className="font-medium">
+                        {form.fields?.length || 0}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500 dark:text-slate-400">Submissions:</span>
-                      <span className="font-medium">{Math.floor(Math.random() * 500) + 50}</span>
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Submissions:
+                      </span>
+                      <span className="font-medium">
+                        {Math.floor(Math.random() * 500) + 50}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500 dark:text-slate-400">Last Updated:</span>
-                      <span className="font-medium">{form.updatedAt.toLocaleDateString()}</span>
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Last Updated:
+                      </span>
+                      <span className="font-medium">
+                        {new Date(form.updatedAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
                 </CardContent>

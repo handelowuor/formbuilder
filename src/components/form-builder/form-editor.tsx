@@ -34,7 +34,10 @@ export function FormEditor({
   selectedRegion,
   availableTemplates = [],
 }: FormEditorProps) {
-  const [currentForm, setCurrentForm] = useState<Form>(form);
+  const [currentForm, setCurrentForm] = useState<Form>({
+    ...form,
+    fields: form.fields || [],
+  });
   const [selectedField, setSelectedField] = useState<FormField | null>(null);
   const [showFieldSelector, setShowFieldSelector] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -133,7 +136,7 @@ export function FormEditor({
                     {currentForm.status}
                   </Badge>
                   <span className="text-sm text-slate-500 dark:text-slate-400">
-                    {currentForm.fields.length} fields
+                    {currentForm.fields?.length || 0} fields
                   </span>
                 </div>
               </div>
@@ -243,7 +246,7 @@ export function FormEditor({
                 </div>
               </CardHeader>
               <CardContent>
-                {currentForm.fields.length === 0 ? (
+                {(currentForm.fields?.length || 0) === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-lg mx-auto mb-4 flex items-center justify-center">
                       <Plus className="w-8 h-8 text-slate-400" />
@@ -261,7 +264,7 @@ export function FormEditor({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {currentForm.fields.map((field, index) => (
+                    {(currentForm.fields || []).map((field, index) => (
                       <div
                         key={field.id}
                         className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
