@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -97,6 +99,7 @@ export function QuestionLibrary({
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [isClient, setIsClient] = useState(false);
   const [editingTemplate, setEditingTemplate] =
     useState<QuestionTemplate | null>(null);
   const [deletingTemplate, setDeletingTemplate] =
@@ -104,6 +107,8 @@ export function QuestionLibrary({
   const [archivingTemplate, setArchivingTemplate] =
     useState<QuestionTemplate | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showCreateTemplateDialog, setShowCreateTemplateDialog] =
+    useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -149,8 +154,15 @@ export function QuestionLibrary({
   };
 
   useEffect(() => {
-    loadTemplates();
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      loadTemplates();
+    }
   }, [
+    isClient,
     currentPage,
     selectedCategory,
     selectedAnswerType,
@@ -312,6 +324,92 @@ export function QuestionLibrary({
     }
   };
 
+  const handleCreateTemplate = async (
+    templateData: Omit<QuestionTemplate, "id">,
+  ) => {
+    setActionLoading(true);
+    try {
+      const response = await templateApi.createTemplate({
+        ...templateData,
+        availableRegions: [getRegionId(selectedCountry)],
+        createdBy: "user",
+      });
+      if (response.status === "success" && response.data) {
+        setTemplates([response.data, ...templates]);
+        setShowCreateTemplateDialog(false);
+        setSuccessMessage(
+          `Template "${response.data.label}" has been created successfully!`,
+        );
+        setShowSuccessDialog(true);
+        toast({
+          title: "Success",
+          description: "Template created successfully!",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: handleApiError(response),
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create template",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateTemplate = async (
+    templateData: Partial<QuestionTemplate>,
+  ) => {
+    if (!editingTemplate) return;
+
+    setActionLoading(true);
+    try {
+      const response = await templateApi.updateTemplate(
+        editingTemplate.id,
+        templateData,
+      );
+      if (response.status === "success" && response.data) {
+        setTemplates(
+          templates.map((t) =>
+            t.id === editingTemplate.id ? response.data! : t,
+          ),
+        );
+        setShowEditDialog(false);
+        setEditingTemplate(null);
+        setSuccessMessage(
+          `Template "${response.data.label}" has been updated successfully!`,
+        );
+        setShowSuccessDialog(true);
+        toast({
+          title: "Success",
+          description: "Template updated successfully!",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: handleApiError(response),
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update template",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const openDeleteDialog = (template: QuestionTemplate) => {
     setDeletingTemplate(template);
     setShowDeleteDialog(true);
@@ -346,7 +444,11 @@ export function QuestionLibrary({
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCreateTemplateDialog(true)}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Create Template
               </Button>
@@ -435,7 +537,9 @@ export function QuestionLibrary({
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold">{totalCount}</div>
+                  <div className="text-2xl font-bold">
+                    {isClient ? totalCount : "..."}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Total Templates
                   </p>
@@ -449,7 +553,9 @@ export function QuestionLibrary({
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold">
-                    {templates.filter((t) => t.isGlobal).length}
+                    {isClient
+                      ? templates.filter((t) => t.isGlobal).length
+                      : "..."}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Global Templates
@@ -463,7 +569,9 @@ export function QuestionLibrary({
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold">{categories.length}</div>
+                  <div className="text-2xl font-bold">
+                    {isClient ? categories.length : "..."}
+                  </div>
                   <p className="text-sm text-muted-foreground">Categories</p>
                 </div>
                 <Tag className="w-8 h-8 text-green-600" />
@@ -475,7 +583,7 @@ export function QuestionLibrary({
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold">
-                    {filteredTemplates.length}
+                    {isClient ? filteredTemplates.length : "..."}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Filtered Results
@@ -708,7 +816,7 @@ export function QuestionLibrary({
         )}
 
         {/* Pagination */}
-        {totalCount > 100 && (
+        {isClient && totalCount > 100 && (
           <div className="flex items-center justify-center mt-8">
             <div className="flex items-center space-x-2">
               <Button
@@ -735,54 +843,26 @@ export function QuestionLibrary({
         )}
       </div>
 
+      {/* Create Template Dialog */}
+      <TemplateDialog
+        open={showCreateTemplateDialog}
+        onOpenChange={setShowCreateTemplateDialog}
+        onSubmit={handleCreateTemplate}
+        isLoading={actionLoading}
+        title="Create New Template"
+      />
+
       {/* Edit Template Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Template</DialogTitle>
-          </DialogHeader>
-          {editingTemplate && (
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Label</label>
-                <input
-                  type="text"
-                  value={editingTemplate.label}
-                  onChange={(e) =>
-                    setEditingTemplate({
-                      ...editingTemplate,
-                      label: e.target.value,
-                    })
-                  }
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Helper Text</label>
-                <textarea
-                  value={editingTemplate.helperText || ""}
-                  onChange={(e) =>
-                    setEditingTemplate({
-                      ...editingTemplate,
-                      helperText: e.target.value,
-                    })
-                  }
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
-                  rows={2}
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setShowEditDialog(false)}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {editingTemplate && (
+        <TemplateDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          onSubmit={handleUpdateTemplate}
+          isLoading={actionLoading}
+          title="Edit Template"
+          initialData={editingTemplate}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -863,5 +943,400 @@ export function QuestionLibrary({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+// Template Dialog Component
+interface TemplateDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (
+    data: Omit<QuestionTemplate, "id"> | Partial<QuestionTemplate>,
+  ) => void;
+  isLoading: boolean;
+  title: string;
+  initialData?: QuestionTemplate;
+}
+
+function TemplateDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  isLoading,
+  title,
+  initialData,
+}: TemplateDialogProps) {
+  const [formData, setFormData] = useState({
+    tkey: initialData?.tkey || "",
+    label: initialData?.label || "",
+    question: initialData?.question || "",
+    answerType: (initialData?.answerType || "text") as AnswerType,
+    helperText: initialData?.helperText || "",
+    category: initialData?.category || "",
+    tags: initialData?.tags?.join(", ") || "",
+    isGlobal: initialData?.isGlobal || false,
+    defaultValue: initialData?.defaultValue || "",
+    dbColumn: initialData?.dbColumn || "",
+    apiEndpoint: initialData?.apiEndpoint || "",
+    tableName: initialData?.tableName || "",
+    columnName: initialData?.columnName || "",
+    encrypted: initialData?.encrypted || false,
+    indexed: initialData?.indexed || false,
+    persistToTable: initialData?.persistToTable || false,
+  });
+
+  const [options, setOptions] = useState<PicklistValue[]>(
+    initialData?.options || [],
+  );
+  const [newOptionLabel, setNewOptionLabel] = useState("");
+  const [newOptionValue, setNewOptionValue] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.label.trim()) return;
+
+    const templateData = {
+      tkey:
+        formData.tkey.trim() ||
+        formData.label.toLowerCase().replace(/\s+/g, "_"),
+      label: formData.label.trim(),
+      question: formData.question.trim() || undefined,
+      answerType: formData.answerType,
+      helperText: formData.helperText.trim() || undefined,
+      category: formData.category.trim() || undefined,
+      tags: formData.tags
+        ? formData.tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [],
+      isGlobal: formData.isGlobal,
+      defaultValue: formData.defaultValue.trim() || undefined,
+      dbColumn: formData.dbColumn.trim() || undefined,
+      apiEndpoint: formData.apiEndpoint.trim() || undefined,
+      validationJson: {},
+      storageMetadata: {
+        tableName: formData.tableName.trim() || undefined,
+        columnName: formData.columnName.trim() || undefined,
+        encrypted: formData.encrypted,
+        indexed: formData.indexed,
+        persistToTable: formData.persistToTable,
+      },
+      options,
+      expectedAnswers: options,
+      answers: options,
+      encrypted: formData.encrypted,
+      indexed: formData.indexed,
+      persistToTable: formData.persistToTable,
+      tableName: formData.tableName.trim() || undefined,
+      columnName: formData.columnName.trim() || undefined,
+    };
+
+    onSubmit(templateData);
+  };
+
+  const handleAddOption = () => {
+    if (!newOptionLabel.trim() || !newOptionValue.trim()) return;
+
+    const newOption: PicklistValue = {
+      id: `opt-${Date.now()}`,
+      label: newOptionLabel.trim(),
+      value: newOptionValue.trim(),
+      order: options.length + 1,
+      isActive: true,
+      isDefault: false,
+    };
+
+    setOptions([...options, newOption]);
+    setNewOptionLabel("");
+    setNewOptionValue("");
+  };
+
+  const handleRemoveOption = (optionId: string) => {
+    setOptions(options.filter((opt) => opt.id !== optionId));
+  };
+
+  const requiresOptions = ["dropdown", "radio", "checkbox"].includes(
+    formData.answerType,
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="template-label">Template Label</Label>
+              <Input
+                id="template-label"
+                value={formData.label}
+                onChange={(e) =>
+                  setFormData({ ...formData, label: e.target.value })
+                }
+                placeholder="Enter template label"
+                className="mt-1"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="template-tkey">Template Key</Label>
+              <Input
+                id="template-tkey"
+                value={formData.tkey}
+                onChange={(e) =>
+                  setFormData({ ...formData, tkey: e.target.value })
+                }
+                placeholder="Auto-generated from label"
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="template-question">Question Text (Optional)</Label>
+            <Textarea
+              id="template-question"
+              value={formData.question}
+              onChange={(e) =>
+                setFormData({ ...formData, question: e.target.value })
+              }
+              placeholder="Additional question text"
+              className="mt-1"
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="template-type">Answer Type</Label>
+              <Select
+                value={formData.answerType}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, answerType: value as AnswerType })
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="textarea">Textarea</SelectItem>
+                  <SelectItem value="number">Number</SelectItem>
+                  <SelectItem value="date">Date</SelectItem>
+                  <SelectItem value="dropdown">Dropdown</SelectItem>
+                  <SelectItem value="radio">Radio</SelectItem>
+                  <SelectItem value="checkbox">Checkbox</SelectItem>
+                  <SelectItem value="lookup">Lookup</SelectItem>
+                  <SelectItem value="formula">Formula</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="template-category">Category</Label>
+              <Input
+                id="template-category"
+                value={formData.category}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
+                }
+                placeholder="e.g., Personal Information"
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="template-help">Help Text</Label>
+            <Textarea
+              id="template-help"
+              value={formData.helperText}
+              onChange={(e) =>
+                setFormData({ ...formData, helperText: e.target.value })
+              }
+              placeholder="Help text for users"
+              className="mt-1"
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="template-tags">Tags (comma-separated)</Label>
+              <Input
+                id="template-tags"
+                value={formData.tags}
+                onChange={(e) =>
+                  setFormData({ ...formData, tags: e.target.value })
+                }
+                placeholder="tag1, tag2, tag3"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="template-default">Default Value</Label>
+              <Input
+                id="template-default"
+                value={formData.defaultValue}
+                onChange={(e) =>
+                  setFormData({ ...formData, defaultValue: e.target.value })
+                }
+                placeholder="Default value"
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          {/* Storage Configuration */}
+          <div className="space-y-4 p-4 border rounded-lg">
+            <h4 className="font-medium">Storage Configuration</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="template-table">Table Name</Label>
+                <Input
+                  id="template-table"
+                  value={formData.tableName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tableName: e.target.value })
+                  }
+                  placeholder="e.g., customers"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="template-column">Column Name</Label>
+                <Input
+                  id="template-column"
+                  value={formData.columnName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, columnName: e.target.value })
+                  }
+                  placeholder="e.g., first_name"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="template-encrypted"
+                  checked={formData.encrypted}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, encrypted: checked })
+                  }
+                />
+                <Label htmlFor="template-encrypted">Encrypted</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="template-indexed"
+                  checked={formData.indexed}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, indexed: checked })
+                  }
+                />
+                <Label htmlFor="template-indexed">Indexed</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="template-persist"
+                  checked={formData.persistToTable}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, persistToTable: checked })
+                  }
+                />
+                <Label htmlFor="template-persist">Persist to Table</Label>
+              </div>
+            </div>
+          </div>
+
+          {/* Options for enumerated types */}
+          {requiresOptions && (
+            <div className="space-y-4">
+              <Label>Answer Options</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Option label"
+                  value={newOptionLabel}
+                  onChange={(e) => setNewOptionLabel(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Option value"
+                  value={newOptionValue}
+                  onChange={(e) => setNewOptionValue(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddOption}
+                  disabled={!newOptionLabel.trim() || !newOptionValue.trim()}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              {options.length > 0 && (
+                <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                  {options.map((option) => (
+                    <div
+                      key={option.id}
+                      className="flex items-center justify-between p-2 rounded bg-background"
+                    >
+                      <div>
+                        <div className="text-sm font-medium">
+                          {option.label}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Value: {option.value}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveOption(option.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="template-global"
+              checked={formData.isGlobal}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, isGlobal: checked })
+              }
+            />
+            <Label htmlFor="template-global">Global Template</Label>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || !formData.label.trim()}
+            >
+              {isLoading ? "Saving..." : initialData ? "Update" : "Create"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -33,6 +33,12 @@ export interface Form {
   createdAt: string;
   updatedAt: string;
   fields?: FormField[]; // For UI purposes
+  // Publishing related fields
+  publishedAt?: string;
+  publishedBy?: string;
+  version?: number;
+  hasPublishedVersion?: boolean;
+  isDirty?: boolean; // Has unpublished changes
 }
 
 // Form Section
@@ -93,6 +99,7 @@ export interface QuestionTemplate {
   id: number;
   tkey: string;
   label: string;
+  question?: string; // Additional question text
   answerType: AnswerType;
   validationJson: Record<string, any>;
   defaultValue?: string;
@@ -100,6 +107,7 @@ export interface QuestionTemplate {
   helperText?: string;
   availableRegions: number[];
   createdBy: string;
+  updatedBy?: string;
   isGlobal: boolean;
   category?: string;
   tags?: string[];
@@ -107,6 +115,18 @@ export interface QuestionTemplate {
   apiEndpoint?: string;
   options?: PicklistValue[];
   status?: "active" | "inactive" | "archived";
+  // Additional fields from documentation
+  expectedAnswers?: PicklistValue[]; // Alias for options for scoring
+  answers?: PicklistValue[]; // Another alias for options
+  persistToTable?: boolean;
+  encrypted?: boolean;
+  indexed?: boolean;
+  tableName?: string;
+  columnName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  version?: number;
+  etag?: string;
 }
 
 // Form Field (UI representation)

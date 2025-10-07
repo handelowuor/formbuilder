@@ -207,27 +207,41 @@ export function FormEditor({
     setShowPublishConfirm(true);
   };
 
-  const confirmPublish = () => {
+  const confirmPublish = async () => {
     try {
-      const publishedForm = {
-        ...currentForm,
-        status: "active" as const,
-        updatedAt: new Date().toISOString(),
-      };
-      onSave(publishedForm);
-      setShowPublishConfirm(false);
-      toast({
-        title: "Success",
-        description:
-          "Form published successfully! It is now live and available to users.",
-        variant: "default",
-      });
+      setIsLoading(true);
+      const response = await formApi.publishForm(currentForm.id);
+      if (response.status === "success" && response.data) {
+        const publishedForm = {
+          ...response.data,
+          publishedAt: new Date().toISOString(),
+          hasPublishedVersion: true,
+          isDirty: false,
+        };
+        onSave(publishedForm);
+        setShowPublishConfirm(false);
+        toast({
+          title: "Success",
+          description:
+            "Form published successfully! All active sections and questions are now live and available to users.",
+          variant: "default",
+        });
+      } else {
+        const errorMsg = handleApiError(response);
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to publish form. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 

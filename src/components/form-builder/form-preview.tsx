@@ -41,14 +41,26 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
     const loadFormData = async () => {
       setIsLoading(true);
       try {
-        // Load sections
-        const sectionsResponse = await sectionApi.listSections(form.id);
+        // Load only published/active sections
+        const sectionsResponse = await sectionApi.listSections(
+          form.id,
+          "published",
+        );
         if (sectionsResponse.status === "success" && sectionsResponse.data) {
-          setSections(sectionsResponse.data);
+          // Filter to only active sections
+          const activeSections = sectionsResponse.data.filter(
+            (section) =>
+              section.isActive &&
+              (section.status === "published" || section.status === "active"),
+          );
+          setSections(activeSections);
 
-          // Load all questions for all sections
-          const questionPromises = sectionsResponse.data.map((section) =>
-            questionApi.listQuestions(form.id, { sectionId: section.id }),
+          // Load only published/active questions for active sections
+          const questionPromises = activeSections.map((section) =>
+            questionApi.listQuestions(form.id, {
+              sectionId: section.id,
+              status: "published",
+            }),
           );
 
           const questionResponses = await Promise.all(questionPromises);
@@ -56,7 +68,13 @@ export function FormPreview({ form, onBack }: FormPreviewProps) {
 
           questionResponses.forEach((response) => {
             if (response.status === "success" && response.data) {
-              allQuestions.push(...response.data.items);
+              // Filter to only published/active questions
+              const publishedQuestions = response.data.items.filter(
+                (question) =>
+                  question.status === "published" ||
+                  question.status === "active",
+              );
+              allQuestions.push(...publishedQuestions);
             }
           });
 

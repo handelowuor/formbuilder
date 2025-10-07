@@ -231,8 +231,56 @@ export const formApi = {
   },
 
   // Publish form
-  async publishForm(id: number): Promise<ApiResponse<Form>> {
-    return apiClient.post<Form>(`/forms/${id}/publish`, {});
+  async publishForm(id: number, notes?: string): Promise<ApiResponse<Form>> {
+    const formIndex = testForms.findIndex((f) => f.id === id);
+    if (formIndex === -1) {
+      return {
+        status: false,
+        code: "FORM_NOT_FOUND",
+        message: "Form not found",
+      };
+    }
+
+    // Update all active sections to published status
+    testSections.forEach((section) => {
+      if (section.formId === id && section.isActive) {
+        section.status = "published";
+        section.updatedAt = new Date().toISOString();
+        section.version = section.version + 1;
+      }
+    });
+
+    // Update all questions in active sections to published status
+    const activeSectionIds = testSections
+      .filter((s) => s.formId === id && s.isActive && s.status === "published")
+      .map((s) => s.id);
+
+    testQuestions.forEach((question) => {
+      if (activeSectionIds.includes(question.sectionId)) {
+        question.status = "published";
+        question.updatedAt = new Date().toISOString();
+        question.version = question.version + 1;
+      }
+    });
+
+    // Update form with published status
+    testForms[formIndex] = {
+      ...testForms[formIndex],
+      status: "active",
+      publishedAt: new Date().toISOString(),
+      hasPublishedVersion: true,
+      isDirty: false,
+      version: (testForms[formIndex].version || 0) + 1,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    return {
+      status: "success",
+      data: testForms[formIndex],
+    };
   },
 
   // Unpublish form
@@ -428,7 +476,48 @@ export const templateApi = {
   async createTemplate(
     data: Omit<QuestionTemplate, "id">,
   ): Promise<ApiResponse<QuestionTemplate>> {
-    return apiClient.post<QuestionTemplate>("/question-templates", data);
+    const newTemplate: QuestionTemplate = {
+      id: Math.max(...testQuestionTemplates.map((t) => t.id)) + 1,
+      tkey: data.tkey,
+      label: data.label,
+      question: data.question,
+      answerType: data.answerType,
+      validationJson: data.validationJson || {},
+      defaultValue: data.defaultValue,
+      storageMetadata: data.storageMetadata || {},
+      helperText: data.helperText,
+      availableRegions: data.availableRegions || [1, 5],
+      createdBy: data.createdBy || "user",
+      updatedBy: data.updatedBy,
+      isGlobal: data.isGlobal || false,
+      category: data.category,
+      tags: data.tags || [],
+      dbColumn: data.dbColumn,
+      apiEndpoint: data.apiEndpoint,
+      options: data.options || [],
+      status: data.status || "active",
+      expectedAnswers: data.expectedAnswers || data.options,
+      answers: data.answers || data.options,
+      persistToTable: data.persistToTable || false,
+      encrypted: data.encrypted || false,
+      indexed: data.indexed || false,
+      tableName: data.tableName,
+      columnName: data.columnName,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      version: 1,
+      etag: `etag-${Date.now()}`,
+    };
+
+    testQuestionTemplates.push(newTemplate);
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    return {
+      status: "success",
+      data: newTemplate,
+    };
   },
 
   // Update template
@@ -436,7 +525,39 @@ export const templateApi = {
     id: number,
     data: Partial<QuestionTemplate>,
   ): Promise<ApiResponse<QuestionTemplate>> {
-    return apiClient.put<QuestionTemplate>(`/question-templates/${id}`, data);
+    const templateIndex = testQuestionTemplates.findIndex((t) => t.id === id);
+    if (templateIndex === -1) {
+      return {
+        status: false,
+        code: "TEMPLATE_NOT_FOUND",
+        message: "Template not found",
+      };
+    }
+
+    testQuestionTemplates[templateIndex] = {
+      ...testQuestionTemplates[templateIndex],
+      ...data,
+      updatedAt: new Date().toISOString(),
+      version: (testQuestionTemplates[templateIndex].version || 1) + 1,
+      etag: `etag-${Date.now()}`,
+      // Handle option aliases
+      expectedAnswers:
+        data.expectedAnswers ||
+        data.options ||
+        testQuestionTemplates[templateIndex].expectedAnswers,
+      answers:
+        data.answers ||
+        data.options ||
+        testQuestionTemplates[templateIndex].answers,
+    };
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    return {
+      status: "success",
+      data: testQuestionTemplates[templateIndex],
+    };
   },
 
   // Delete template
