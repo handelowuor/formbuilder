@@ -479,7 +479,30 @@ export const sectionApi = {
     id: number,
     data: UpdateSectionRequest,
   ): Promise<ApiResponse<FormSection>> {
-    return apiClient.put<FormSection>(`/sections/${id}`, data);
+    const sectionIndex = testSections.findIndex((s) => s.id === id);
+    if (sectionIndex === -1) {
+      return {
+        status: false,
+        code: "SECTION_NOT_FOUND",
+        message: "Section not found",
+      };
+    }
+
+    testSections[sectionIndex] = {
+      ...testSections[sectionIndex],
+      ...data,
+      updatedAt: new Date().toISOString(),
+      etag: `etag-${Date.now()}`,
+      version: testSections[sectionIndex].version + 1,
+    };
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    return {
+      status: "success",
+      data: testSections[sectionIndex],
+    };
   },
 
   // Archive section
@@ -593,7 +616,23 @@ export const questionApi = {
 
   // Get question by ID
   async getQuestion(id: number): Promise<ApiResponse<FormQuestion>> {
-    return apiClient.get<FormQuestion>(`/questions/${id}`);
+    const question = testQuestions.find((q) => q.id === id);
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    if (!question) {
+      return {
+        status: false,
+        code: "QUESTION_NOT_FOUND",
+        message: "Question not found",
+      };
+    }
+
+    return {
+      status: "success",
+      data: question,
+    };
   },
 
   // Create new question
@@ -664,7 +703,30 @@ export const questionApi = {
     id: number,
     data: UpdateQuestionRequest,
   ): Promise<ApiResponse<FormQuestion>> {
-    return apiClient.put<FormQuestion>(`/questions/${id}`, data);
+    const questionIndex = testQuestions.findIndex((q) => q.id === id);
+    if (questionIndex === -1) {
+      return {
+        status: false,
+        code: "QUESTION_NOT_FOUND",
+        message: "Question not found",
+      };
+    }
+
+    testQuestions[questionIndex] = {
+      ...testQuestions[questionIndex],
+      ...data,
+      updatedAt: new Date().toISOString(),
+      etag: `etag-q${Date.now()}`,
+      version: testQuestions[questionIndex].version + 1,
+    };
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    return {
+      status: "success",
+      data: testQuestions[questionIndex],
+    };
   },
 
   // Archive question
@@ -689,15 +751,77 @@ export const questionApi = {
     };
   },
 
+  // Move question to different section
+  async moveQuestion(
+    questionId: number,
+    targetSectionId: number,
+    targetOrder?: number,
+  ): Promise<ApiResponse<FormQuestion>> {
+    const questionIndex = testQuestions.findIndex((q) => q.id === questionId);
+    if (questionIndex === -1) {
+      return {
+        status: false,
+        code: "QUESTION_NOT_FOUND",
+        message: "Question not found",
+      };
+    }
+
+    const targetSection = testSections.find((s) => s.id === targetSectionId);
+    if (!targetSection) {
+      return {
+        status: false,
+        code: "SECTION_NOT_FOUND",
+        message: "Target section not found",
+      };
+    }
+
+    testQuestions[questionIndex] = {
+      ...testQuestions[questionIndex],
+      sectionId: targetSectionId,
+      order:
+        targetOrder ||
+        testQuestions.filter((q) => q.sectionId === targetSectionId).length + 1,
+      updatedAt: new Date().toISOString(),
+      etag: `etag-q${Date.now()}`,
+      version: testQuestions[questionIndex].version + 1,
+    };
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    return {
+      status: "success",
+      data: testQuestions[questionIndex],
+    };
+  },
+
   // Reorder questions
   async reorderQuestions(
     sectionId: number,
     questionIds: number[],
   ): Promise<ApiResponse<FormQuestion[]>> {
-    return apiClient.put<FormQuestion[]>(
-      `/sections/${sectionId}/questions/reorder`,
-      { questionIds },
+    const sectionQuestions = testQuestions.filter(
+      (q) => q.sectionId === sectionId,
     );
+
+    questionIds.forEach((questionId, index) => {
+      const questionIndex = testQuestions.findIndex((q) => q.id === questionId);
+      if (questionIndex !== -1) {
+        testQuestions[questionIndex] = {
+          ...testQuestions[questionIndex],
+          order: index + 1,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+    });
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    return {
+      status: "success",
+      data: testQuestions.filter((q) => q.sectionId === sectionId),
+    };
   },
 
   // Bulk update questions
@@ -705,10 +829,83 @@ export const questionApi = {
     questionIds: number[],
     updates: Partial<FormQuestion>,
   ): Promise<ApiResponse<FormQuestion[]>> {
-    return apiClient.put<FormQuestion[]>("/questions/bulk-update", {
-      questionIds,
-      updates,
+    const updatedQuestions: FormQuestion[] = [];
+
+    questionIds.forEach((questionId) => {
+      const questionIndex = testQuestions.findIndex((q) => q.id === questionId);
+      if (questionIndex !== -1) {
+        testQuestions[questionIndex] = {
+          ...testQuestions[questionIndex],
+          ...updates,
+          updatedAt: new Date().toISOString(),
+          etag: `etag-q${Date.now()}`,
+          version: testQuestions[questionIndex].version + 1,
+        };
+        updatedQuestions.push(testQuestions[questionIndex]);
+      }
     });
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    return {
+      status: "success",
+      data: updatedQuestions,
+    };
+  },
+
+  // Copy question from template
+  async copyQuestionFromTemplate(
+    formId: number,
+    sectionId: number,
+    templateId: number,
+    customizations?: Partial<FormQuestion>,
+  ): Promise<ApiResponse<FormQuestion>> {
+    const template = testQuestionTemplates.find((t) => t.id === templateId);
+    if (!template) {
+      return {
+        status: false,
+        code: "TEMPLATE_NOT_FOUND",
+        message: "Question template not found",
+      };
+    }
+
+    const newQuestion: FormQuestion = {
+      id: Math.max(...testQuestions.map((q) => q.id)) + 1,
+      formId,
+      sectionId,
+      order: testQuestions.filter((q) => q.sectionId === sectionId).length + 1,
+      questionTemplateId: templateId,
+      tkey: template.tkey,
+      label: template.label,
+      helperText: template.helperText,
+      answerType: template.answerType,
+      required: false,
+      validation: template.validationJson,
+      visibleIf: [],
+      defaultValue: undefined,
+      optionsApi: undefined,
+      dependsOn: [],
+      options: [],
+      storage: undefined,
+      status: "draft",
+      legacyStatus: "active",
+      etag: `etag-q${Date.now()}`,
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...customizations,
+    };
+
+    testQuestions.push(newQuestion);
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    return {
+      status: "success",
+      data: newQuestion,
+    };
   },
 };
 

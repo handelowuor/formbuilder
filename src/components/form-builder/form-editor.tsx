@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Save, Eye, Plus, Settings, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,20 @@ import { Separator } from "@/components/ui/separator";
 import {
   Form,
   FormField,
+  FormSection,
+  FormQuestion,
   QuestionTemplate,
   CompanyRegion,
 } from "@/types/form-builder";
 import { FieldTypeSelector } from "./field-type-selector";
 import { FieldConfigurationPanel } from "./field-configuration-panel";
 import { FormPreview } from "./form-preview";
+import { SectionManager } from "./section-manager";
+import {
+  sectionApi,
+  questionApi,
+  handleApiError,
+} from "@/lib/api/form-builder-api";
 
 interface FormEditorProps {
   form: Form;
@@ -42,9 +50,46 @@ export function FormEditor({
   const [showFieldSelector, setShowFieldSelector] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const [sections, setSections] = useState<FormSection[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load sections when component mounts
+  useEffect(() => {
+    loadSections();
+  }, [form.id]);
+
+  const loadSections = async () => {
+    setIsLoading(true);
+    try {
+      const response = await sectionApi.listSections(form.id);
+      if (response.status === "success" && response.data) {
+        setSections(response.data);
+      } else {
+        setError(handleApiError(response));
+      }
+    } catch (err) {
+      setError("Failed to load sections");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleFormUpdate = (updates: Partial<Form>) => {
-    setCurrentForm((prev) => ({ ...prev, ...updates, updatedAt: new Date() }));
+    setCurrentForm((prev) => ({
+      ...prev,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const handleSectionsChange = (updatedSections: FormSection[]) => {
+    setSections(updatedSections);
+  };
+
+  const handleError = (errorMessage: string) => {
+    setError(errorMessage);
+    setTimeout(() => setError(null), 5000); // Clear error after 5 seconds
   };
 
   const handleAddField = (fieldType: string) => {
@@ -97,8 +142,8 @@ export function FormEditor({
   const handlePublish = () => {
     const publishedForm = {
       ...currentForm,
-      status: "published" as const,
-      updatedAt: new Date(),
+      status: "active" as const,
+      updatedAt: new Date().toISOString(),
     };
     onSave(publishedForm);
   };
@@ -128,15 +173,13 @@ export function FormEditor({
                 <div className="flex items-center space-x-2 mt-1">
                   <Badge
                     variant={
-                      currentForm.status === "published"
-                        ? "default"
-                        : "secondary"
+                      currentForm.status === "active" ? "default" : "secondary"
                     }
                   >
                     {currentForm.status}
                   </Badge>
                   <span className="text-sm text-slate-500 dark:text-slate-400">
-                    {currentForm.fields?.length || 0} fields
+                    {sections.length} sections
                   </span>
                 </div>
               </div>
@@ -164,6 +207,12 @@ export function FormEditor({
       </div>
 
       <div className="container mx-auto px-6 py-6">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-red-800 dark:text-red-200">{error}</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Form Settings Panel */}
           <div className="lg:col-span-1">
@@ -195,151 +244,54 @@ export function FormEditor({
                 </div>
                 <Separator />
                 <div>
-                  <h4 className="font-medium mb-2">Quick Actions</h4>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => setShowFieldSelector(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add New Field
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => setShowTemplateLibrary(true)}
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Add from Library
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Form Settings
-                    </Button>
+                  <h4 className="font-medium mb-2">Form Summary</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Sections:</span>
+                      <Badge variant="outline">{sections.length}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Status:</span>
+                      <Badge
+                        variant={
+                          currentForm.status === "active"
+                            ? "default"
+                            : "secondary"
+                        }
+                      >
+                        {currentForm.status}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Form Canvas */}
-          <div className="lg:col-span-2">
+          {/* Form Canvas - Section Manager */}
+          <div className="lg:col-span-3">
             <Card className="min-h-[600px]">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Form Canvas</CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowFieldSelector(true)}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Field
-                  </Button>
-                </div>
+                <CardTitle className="text-lg">Form Structure</CardTitle>
               </CardHeader>
               <CardContent>
-                {(currentForm.fields?.length || 0) === 0 ? (
+                {isLoading ? (
                   <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                      <Plus className="w-8 h-8 text-slate-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
-                      No fields yet
-                    </h3>
-                    <p className="text-slate-500 dark:text-slate-400 mb-4">
-                      Start building your form by adding fields
+                    <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p className="text-slate-500 dark:text-slate-400">
+                      Loading sections...
                     </p>
-                    <Button onClick={() => setShowFieldSelector(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Your First Field
-                    </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {(currentForm.fields || []).map((field, index) => (
-                      <div
-                        key={field.id}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                          selectedField?.id === field.id
-                            ? "border-primary bg-primary/5"
-                            : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
-                        }`}
-                        onClick={() => setSelectedField(field)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center text-sm font-medium">
-                              {index + 1}
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-slate-900 dark:text-slate-100">
-                                {field.label}
-                              </h4>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Badge variant="outline" className="text-xs">
-                                  {field.type}
-                                </Badge>
-                                {field.required && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-xs"
-                                  >
-                                    Required
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFieldDelete(field.id);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <SectionManager
+                    formId={currentForm.id}
+                    sections={sections}
+                    onSectionsChange={handleSectionsChange}
+                    onError={handleError}
+                  />
                 )}
               </CardContent>
             </Card>
-          </div>
-
-          {/* Field Configuration Panel */}
-          <div className="lg:col-span-1">
-            {selectedField ? (
-              <FieldConfigurationPanel
-                field={selectedField}
-                onUpdate={handleFieldUpdate}
-                onDelete={() => handleFieldDelete(selectedField.id)}
-              />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Field Configuration</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8">
-                    <Settings className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                    <p className="text-slate-500 dark:text-slate-400">
-                      Select a field to configure its properties
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </div>
