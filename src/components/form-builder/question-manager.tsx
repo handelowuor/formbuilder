@@ -14,23 +14,18 @@ import {
   CheckCircle,
   AlertCircle,
   Archive,
+  TestTube,
+  Loader2,
+  Database,
+  Eye,
+  EyeOff,
+  X,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -38,13 +33,35 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   FormQuestion,
   QuestionTemplate,
   CreateQuestionRequest,
   UpdateQuestionRequest,
   AnswerType,
+  PicklistValue,
+  ApiTestResponse,
 } from "@/types/form-builder";
 import {
   questionApi,
@@ -85,6 +102,12 @@ export function QuestionManager({
   const [movingQuestion, setMovingQuestion] = useState<FormQuestion | null>(
     null,
   );
+  const [deletingQuestion, setDeletingQuestion] = useState<FormQuestion | null>(
+    null,
+  );
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [templates, setTemplates] = useState<QuestionTemplate[]>([]);
   const [sections, setSections] = useState<FormSection[]>([]);
@@ -95,6 +118,9 @@ export function QuestionManager({
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Prevent hydration mismatch by ensuring consistent initial state
+  const safeQuestions = isClient ? questions : [];
 
   // Load templates when library is opened
   useEffect(() => {
@@ -153,7 +179,7 @@ export function QuestionManager({
         etag: `etag-${Date.now()}`,
       });
       if (response.status === "success" && response.data) {
-        onQuestionsChange([...questions, response.data]);
+        onQuestionsChange([...safeQuestions, response.data]);
         setShowCreateDialog(false);
         toast({
           title: "Success",
@@ -194,7 +220,7 @@ export function QuestionManager({
       });
       if (response.status === "success" && response.data) {
         onQuestionsChange(
-          questions.map((q) => (q.id === questionId ? response.data! : q)),
+          safeQuestions.map((q) => (q.id === questionId ? response.data! : q)),
         );
         setEditingQuestion(null);
         toast({
@@ -224,25 +250,22 @@ export function QuestionManager({
     }
   };
 
-  const handleDeleteQuestion = async (questionId: number) => {
-    if (
-      !confirm(
-        "Are you sure you want to archive this question? This action can be reversed later if needed.",
-      )
-    ) {
-      return;
-    }
+  const handleDeleteQuestion = async () => {
+    if (!deletingQuestion) return;
 
     setIsLoading(true);
     try {
-      const response = await questionApi.archiveQuestion(questionId);
+      const response = await questionApi.archiveQuestion(deletingQuestion.id);
       if (response.status === "success") {
-        onQuestionsChange(questions.filter((q) => q.id !== questionId));
-        toast({
-          title: "Success",
-          description: "Question archived successfully!",
-          variant: "default",
-        });
+        onQuestionsChange(
+          safeQuestions.filter((q) => q.id !== deletingQuestion.id),
+        );
+        setShowDeleteDialog(false);
+        setDeletingQuestion(null);
+        setSuccessMessage(
+          `Question "${deletingQuestion.label}" has been archived successfully!`,
+        );
+        setShowSuccessDialog(true);
       } else {
         const errorMsg = handleApiError(response);
         onError(errorMsg);
@@ -265,6 +288,11 @@ export function QuestionManager({
     }
   };
 
+  const openDeleteDialog = (question: FormQuestion) => {
+    setDeletingQuestion(question);
+    setShowDeleteDialog(true);
+  };
+
   const handleMoveQuestion = async (
     questionId: number,
     targetSectionId: number,
@@ -277,7 +305,7 @@ export function QuestionManager({
       );
       if (response.status === "success") {
         // Remove from current section
-        onQuestionsChange(questions.filter((q) => q.id !== questionId));
+        onQuestionsChange(safeQuestions.filter((q) => q.id !== questionId));
         setShowMoveDialog(false);
         setMovingQuestion(null);
         toast({
@@ -316,7 +344,7 @@ export function QuestionManager({
         templateId,
       );
       if (response.status === "success" && response.data) {
-        onQuestionsChange([...questions, response.data]);
+        onQuestionsChange([...safeQuestions, response.data]);
         setShowTemplateLibrary(false);
         toast({
           title: "Success",
@@ -394,14 +422,14 @@ export function QuestionManager({
             <Settings className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>Loading questions...</p>
           </div>
-        ) : questions.length === 0 ? (
+        ) : safeQuestions.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Settings className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>No questions in this section</p>
             <p className="text-sm">Add questions to start building your form</p>
           </div>
         ) : (
-          questions
+          safeQuestions
             .sort((a, b) => a.order - b.order)
             .map((question) => (
               <Card
@@ -460,7 +488,7 @@ export function QuestionManager({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDeleteQuestion(question.id)}
+                      onClick={() => openDeleteDialog(question)}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Archive className="w-4 h-4" />
@@ -626,6 +654,54 @@ export function QuestionManager({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive Question</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive &quot;{deletingQuestion?.label}
+              &quot;? This action can be reversed later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setDeletingQuestion(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteQuestion}
+              disabled={isLoading}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isLoading ? "Archiving..." : "Archive Question"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Success Dialog */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span>Success</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>{successMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -659,13 +735,25 @@ function QuestionDialog({
     optionsApi: initialData?.optionsApi || "",
     dependsOn: initialData?.dependsOn || [],
     status: initialData?.status || "draft",
+    dbColumn: initialData?.dbColumn || "",
+    apiEndpoint: initialData?.apiEndpoint || "",
   });
+
+  const [picklistValues, setPicklistValues] = useState<PicklistValue[]>(
+    initialData?.picklistValues || [],
+  );
+  const [isTestingApi, setIsTestingApi] = useState(false);
+  const [apiTestResult, setApiTestResult] = useState<ApiTestResponse | null>(
+    null,
+  );
+  const [newOptionLabel, setNewOptionLabel] = useState("");
+  const [newOptionValue, setNewOptionValue] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.label.trim()) return;
 
-    onSubmit({
+    const questionData: CreateQuestionRequest = {
       tkey:
         formData.tkey.trim() ||
         formData.label.toLowerCase().replace(/\s+/g, "_"),
@@ -679,8 +767,99 @@ function QuestionDialog({
       dependsOn: formData.dependsOn,
       status: formData.status,
       sectionId: 0, // Will be set by parent
-    });
+      storage: {
+        ...initialData?.storage,
+        dbColumn: formData.dbColumn.trim() || undefined,
+        apiEndpoint: formData.apiEndpoint.trim() || undefined,
+      },
+      options: picklistValues.length > 0 ? picklistValues : undefined,
+    };
+
+    onSubmit(questionData);
   };
+
+  const handleTestApi = async () => {
+    if (!formData.apiEndpoint.trim()) return;
+
+    setIsTestingApi(true);
+    setApiTestResult(null);
+
+    try {
+      const response = await templateApi.testApiEndpoint(formData.apiEndpoint);
+      if (response.status === "success" && response.data) {
+        setApiTestResult(response.data);
+        // Auto-populate options if API returns data
+        if (response.data.data && Array.isArray(response.data.data)) {
+          const apiOptions: PicklistValue[] = response.data.data.map(
+            (item: any, index: number) => ({
+              id: `api-${index}`,
+              label: item.label || item.name || String(item.value),
+              value: String(item.value || item.id),
+              order: index + 1,
+              isActive: true,
+              isDefault: false,
+            }),
+          );
+          setPicklistValues(apiOptions);
+        }
+      } else {
+        setApiTestResult({
+          success: false,
+          error: response.message || "API test failed",
+        });
+      }
+    } catch (error) {
+      setApiTestResult({
+        success: false,
+        error: "Failed to test API endpoint",
+      });
+    } finally {
+      setIsTestingApi(false);
+    }
+  };
+
+  const handleAddOption = () => {
+    if (!newOptionLabel.trim() || !newOptionValue.trim()) return;
+
+    const newOption: PicklistValue = {
+      id: `opt-${Date.now()}`,
+      label: newOptionLabel.trim(),
+      value: newOptionValue.trim(),
+      order: picklistValues.length + 1,
+      isActive: true,
+      isDefault: false,
+      usageCount: 0,
+    };
+
+    setPicklistValues([...picklistValues, newOption]);
+    setNewOptionLabel("");
+    setNewOptionValue("");
+  };
+
+  const handleRemoveOption = (optionId: string) => {
+    setPicklistValues(picklistValues.filter((opt) => opt.id !== optionId));
+  };
+
+  const handleToggleOptionActive = (optionId: string) => {
+    setPicklistValues(
+      picklistValues.map((opt) =>
+        opt.id === optionId ? { ...opt, isActive: !opt.isActive } : opt,
+      ),
+    );
+  };
+
+  const handleSetDefaultOption = (optionId: string) => {
+    setPicklistValues(
+      picklistValues.map((opt) => ({
+        ...opt,
+        isDefault: opt.id === optionId,
+      })),
+    );
+  };
+
+  const requiresOptions = ["dropdown", "radio", "checkbox"].includes(
+    formData.answerType,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -760,18 +939,201 @@ function QuestionDialog({
             />
             <Label htmlFor="question-required">Required Question</Label>
           </div>
+          {/* Database Column */}
           <div>
-            <Label htmlFor="question-options-api">Options API (Optional)</Label>
+            <Label htmlFor="question-db-column">
+              Database Column (Optional)
+            </Label>
             <Input
-              id="question-options-api"
-              value={formData.optionsApi}
+              id="question-db-column"
+              value={formData.dbColumn}
               onChange={(e) =>
-                setFormData({ ...formData, optionsApi: e.target.value })
+                setFormData({ ...formData, dbColumn: e.target.value })
               }
-              placeholder="API endpoint for dynamic options"
+              placeholder="e.g., customer_first_name"
               className="mt-1"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Specify the database column where this field's data will be stored
+            </p>
           </div>
+
+          {/* API Endpoint for Options */}
+          {requiresOptions && (
+            <div>
+              <Label htmlFor="question-api-endpoint">
+                API Endpoint (Optional)
+              </Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="question-api-endpoint"
+                  value={formData.apiEndpoint}
+                  onChange={(e) =>
+                    setFormData({ ...formData, apiEndpoint: e.target.value })
+                  }
+                  placeholder="https://api.example.com/options"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTestApi}
+                  disabled={!formData.apiEndpoint.trim() || isTestingApi}
+                >
+                  {isTestingApi ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <TestTube className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+              {apiTestResult && (
+                <div
+                  className={`mt-2 p-2 rounded text-sm ${
+                    apiTestResult.success
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-red-50 text-red-700 border border-red-200"
+                  }`}
+                >
+                  {apiTestResult.success ? (
+                    <div>
+                      <div className="flex items-center gap-1 font-medium">
+                        <CheckCircle className="w-3 h-3" />
+                        API Test Successful
+                      </div>
+                      <div className="text-xs mt-1">
+                        Response time: {apiTestResult.responseTime}ms | Status:{" "}
+                        {apiTestResult.statusCode}
+                      </div>
+                      {apiTestResult.data && (
+                        <div className="text-xs mt-1">
+                          Found {apiTestResult.data.length} options
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center gap-1 font-medium">
+                        <AlertCircle className="w-3 h-3" />
+                        API Test Failed
+                      </div>
+                      <div className="text-xs mt-1">{apiTestResult.error}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual Options */}
+          {requiresOptions && (
+            <div>
+              <Label>Answer Options</Label>
+              <div className="mt-2 space-y-2">
+                {/* Add New Option */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Option label"
+                    value={newOptionLabel}
+                    onChange={(e) => setNewOptionLabel(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Option value"
+                    value={newOptionValue}
+                    onChange={(e) => setNewOptionValue(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddOption}
+                    disabled={!newOptionLabel.trim() || !newOptionValue.trim()}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Options List */}
+                {picklistValues.length > 0 && (
+                  <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                    {picklistValues.map((option) => (
+                      <div
+                        key={option.id}
+                        className={`flex items-center justify-between p-2 rounded ${
+                          option.isActive
+                            ? "bg-background"
+                            : "bg-muted opacity-60"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 flex-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleOptionActive(option.id)}
+                          >
+                            {option.isActive ? (
+                              <Eye className="w-3 h-3" />
+                            ) : (
+                              <EyeOff className="w-3 h-3" />
+                            )}
+                          </Button>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium">
+                              {option.label}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Value: {option.value}
+                              {option.usageCount !== undefined &&
+                                option.usageCount > 0 && (
+                                  <span className="ml-2">
+                                    Used {option.usageCount} times
+                                  </span>
+                                )}
+                            </div>
+                          </div>
+                          {option.isDefault && (
+                            <Badge variant="secondary" className="text-xs">
+                              Default
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSetDefaultOption(option.id)}
+                            disabled={option.isDefault}
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveOption(option.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {picklistValues.length === 0 && !formData.apiEndpoint && (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    No options added yet. Add options manually or configure an
+                    API endpoint.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <div>
             <Label htmlFor="question-status">Status</Label>
             <Select

@@ -342,6 +342,8 @@ export const testQuestionTemplates: QuestionTemplate[] = [
     isGlobal: true,
     category: "Personal Information",
     tags: ["name", "personal", "required"],
+    dbColumn: "customer_first_name",
+    status: "active",
   },
   {
     id: 2,
@@ -357,6 +359,8 @@ export const testQuestionTemplates: QuestionTemplate[] = [
     isGlobal: true,
     category: "Personal Information",
     tags: ["name", "personal", "required"],
+    dbColumn: "customer_last_name",
+    status: "active",
   },
   {
     id: 3,
@@ -372,6 +376,8 @@ export const testQuestionTemplates: QuestionTemplate[] = [
     isGlobal: true,
     category: "Personal Information",
     tags: ["date", "personal", "age"],
+    dbColumn: "customer_date_of_birth",
+    status: "active",
   },
   {
     id: 4,
@@ -387,6 +393,8 @@ export const testQuestionTemplates: QuestionTemplate[] = [
     isGlobal: true,
     category: "Contact Information",
     tags: ["phone", "contact", "required"],
+    dbColumn: "customer_phone_number",
+    status: "active",
   },
   {
     id: 5,
@@ -402,6 +410,8 @@ export const testQuestionTemplates: QuestionTemplate[] = [
     isGlobal: true,
     category: "Contact Information",
     tags: ["email", "contact"],
+    dbColumn: "customer_email_address",
+    status: "active",
   },
   {
     id: 6,
@@ -417,6 +427,8 @@ export const testQuestionTemplates: QuestionTemplate[] = [
     isGlobal: true,
     category: "Business Information",
     tags: ["business", "name", "required"],
+    dbColumn: "business_name",
+    status: "active",
   },
   {
     id: 7,
@@ -432,6 +444,47 @@ export const testQuestionTemplates: QuestionTemplate[] = [
     isGlobal: true,
     category: "Personal Information",
     tags: ["gender", "personal"],
+    dbColumn: "customer_gender",
+    apiEndpoint: "https://api.example.com/gender-options",
+    options: [
+      {
+        id: "gender-1",
+        label: "Male",
+        value: "male",
+        order: 1,
+        isActive: true,
+        isDefault: false,
+        usageCount: 45,
+      },
+      {
+        id: "gender-2",
+        label: "Female",
+        value: "female",
+        order: 2,
+        isActive: true,
+        isDefault: false,
+        usageCount: 38,
+      },
+      {
+        id: "gender-3",
+        label: "Other",
+        value: "other",
+        order: 3,
+        isActive: true,
+        isDefault: false,
+        usageCount: 2,
+      },
+      {
+        id: "gender-4",
+        label: "Prefer not to say",
+        value: "prefer_not_to_say",
+        order: 4,
+        isActive: false,
+        isDefault: false,
+        usageCount: 0,
+      },
+    ],
+    status: "active",
   },
   {
     id: 8,
@@ -447,6 +500,8 @@ export const testQuestionTemplates: QuestionTemplate[] = [
     isGlobal: true,
     category: "Financial Information",
     tags: ["income", "financial"],
+    dbColumn: "customer_monthly_income",
+    status: "active",
   },
 ];
 

@@ -83,6 +83,9 @@ export interface FormQuestion {
   version: number;
   createdAt: string;
   updatedAt: string;
+  dbColumn?: string;
+  apiEndpoint?: string;
+  picklistValues?: PicklistValue[];
 }
 
 // Question Template
@@ -100,6 +103,10 @@ export interface QuestionTemplate {
   isGlobal: boolean;
   category?: string;
   tags?: string[];
+  dbColumn?: string;
+  apiEndpoint?: string;
+  options?: PicklistValue[];
+  status?: "active" | "inactive" | "archived";
 }
 
 // Form Field (UI representation)
@@ -122,6 +129,8 @@ export interface FormField {
   validationRules: ValidationRule[];
   dependencies: any[];
   useGlobalValueSet?: boolean;
+  dbColumn?: string;
+  apiEndpoint?: string;
 }
 
 // Validation Rule
@@ -139,6 +148,8 @@ export interface PicklistValue {
   value: string;
   order?: number;
   isDefault?: boolean;
+  isActive?: boolean;
+  usageCount?: number;
 }
 
 // API Request/Response Types
@@ -147,6 +158,15 @@ export interface ApiResponse<T> {
   data?: T;
   code?: string;
   message?: string;
+}
+
+// API Test Response
+export interface ApiTestResponse {
+  success: boolean;
+  data?: any[];
+  error?: string;
+  responseTime?: number;
+  statusCode?: number;
 }
 
 export interface PaginatedResponse<T> {

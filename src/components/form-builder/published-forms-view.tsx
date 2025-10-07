@@ -20,6 +20,25 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form } from "@/types/form-builder";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
 
 interface PublishedFormsViewProps {
   forms: Form[];
@@ -224,45 +243,7 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Form Settings</CardTitle>
-                  <CardDescription>
-                    Configure form behavior and notifications
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Accept Submissions</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Allow new form submissions
-                        </p>
-                      </div>
-                      <Badge variant="default">Active</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Email Notifications</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Send email when form is submitted
-                        </p>
-                      </div>
-                      <Badge variant="secondary">Disabled</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Data Retention</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          How long to keep submission data
-                        </p>
-                      </div>
-                      <Badge variant="outline">1 Year</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <FormSettingsEditor form={selectedForm} />
             </TabsContent>
           </Tabs>
         </div>
@@ -361,6 +342,297 @@ export function PublishedFormsView({ forms, onBack }: PublishedFormsViewProps) {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Form Settings Editor Component
+interface FormSettingsEditorProps {
+  form: Form;
+}
+
+function FormSettingsEditor({ form }: FormSettingsEditorProps) {
+  const { toast } = useToast();
+  const [settings, setSettings] = useState({
+    acceptSubmissions: true,
+    emailNotifications: false,
+    notificationEmail: "admin@example.com",
+    dataRetention: "1_year",
+    allowDuplicates: true,
+    requireAuth: false,
+    customThankYou: false,
+    thankYouMessage: "Thank you for your submission!",
+    redirectUrl: "",
+    maxSubmissions: "",
+    submissionDeadline: "",
+  });
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      toast({
+        title: "Success",
+        description: "Form settings updated successfully!",
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update form settings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Basic Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Basic Settings</CardTitle>
+          <CardDescription>
+            Configure basic form behavior and access
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base">Accept Submissions</Label>
+              <div className="text-sm text-muted-foreground">
+                Allow new form submissions
+              </div>
+            </div>
+            <Switch
+              checked={settings.acceptSubmissions}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, acceptSubmissions: checked })
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base">Require Authentication</Label>
+              <div className="text-sm text-muted-foreground">
+                Users must be logged in to submit
+              </div>
+            </div>
+            <Switch
+              checked={settings.requireAuth}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, requireAuth: checked })
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base">Allow Duplicate Submissions</Label>
+              <div className="text-sm text-muted-foreground">
+                Allow multiple submissions from same user
+              </div>
+            </div>
+            <Switch
+              checked={settings.allowDuplicates}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, allowDuplicates: checked })
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="max-submissions">
+                Max Submissions (Optional)
+              </Label>
+              <Input
+                id="max-submissions"
+                type="number"
+                placeholder="Unlimited"
+                value={settings.maxSubmissions}
+                onChange={(e) =>
+                  setSettings({ ...settings, maxSubmissions: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="submission-deadline">
+                Submission Deadline (Optional)
+              </Label>
+              <Input
+                id="submission-deadline"
+                type="datetime-local"
+                value={settings.submissionDeadline}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    submissionDeadline: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notification Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Notification Settings</CardTitle>
+          <CardDescription>
+            Configure email notifications and alerts
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base">Email Notifications</Label>
+              <div className="text-sm text-muted-foreground">
+                Send email when form is submitted
+              </div>
+            </div>
+            <Switch
+              checked={settings.emailNotifications}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, emailNotifications: checked })
+              }
+            />
+          </div>
+
+          {settings.emailNotifications && (
+            <div className="space-y-2">
+              <Label htmlFor="notification-email">Notification Email</Label>
+              <Input
+                id="notification-email"
+                type="email"
+                placeholder="admin@example.com"
+                value={settings.notificationEmail}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    notificationEmail: e.target.value,
+                  })
+                }
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Data Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Management</CardTitle>
+          <CardDescription>
+            Configure data retention and storage policies
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="data-retention">Data Retention Period</Label>
+            <Select
+              value={settings.dataRetention}
+              onValueChange={(value) =>
+                setSettings({ ...settings, dataRetention: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="30_days">30 Days</SelectItem>
+                <SelectItem value="90_days">90 Days</SelectItem>
+                <SelectItem value="6_months">6 Months</SelectItem>
+                <SelectItem value="1_year">1 Year</SelectItem>
+                <SelectItem value="2_years">2 Years</SelectItem>
+                <SelectItem value="indefinite">Indefinite</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="text-sm text-muted-foreground">
+              How long to keep submission data before automatic deletion
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Thank You Page Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Thank You Page</CardTitle>
+          <CardDescription>
+            Customize what users see after submitting the form
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base">Custom Thank You Message</Label>
+              <div className="text-sm text-muted-foreground">
+                Show custom message instead of default
+              </div>
+            </div>
+            <Switch
+              checked={settings.customThankYou}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, customThankYou: checked })
+              }
+            />
+          </div>
+
+          {settings.customThankYou && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="thank-you-message">Thank You Message</Label>
+                <Textarea
+                  id="thank-you-message"
+                  placeholder="Thank you for your submission!"
+                  value={settings.thankYouMessage}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      thankYouMessage: e.target.value,
+                    })
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="redirect-url">Redirect URL (Optional)</Label>
+                <Input
+                  id="redirect-url"
+                  type="url"
+                  placeholder="https://example.com/thank-you"
+                  value={settings.redirectUrl}
+                  onChange={(e) =>
+                    setSettings({ ...settings, redirectUrl: e.target.value })
+                  }
+                />
+                <div className="text-sm text-muted-foreground">
+                  Redirect users to this URL after submission
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button
+          onClick={handleSaveSettings}
+          disabled={isSaving}
+          className="min-w-[120px]"
+        >
+          {isSaving ? "Saving..." : "Save Settings"}
+        </Button>
       </div>
     </div>
   );

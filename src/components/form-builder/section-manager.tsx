@@ -31,6 +31,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   FormSection,
   FormQuestion,
   CreateSectionRequest,
@@ -63,7 +73,13 @@ export function SectionManager({
   const [editingSection, setEditingSection] = useState<FormSection | null>(
     null,
   );
+  const [deletingSection, setDeletingSection] = useState<FormSection | null>(
+    null,
+  );
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sectionQuestions, setSectionQuestions] = useState<
     Record<number, FormQuestion[]>
@@ -192,31 +208,26 @@ export function SectionManager({
     }
   };
 
-  const handleDeleteSection = async (sectionId: number) => {
-    if (
-      !confirm(
-        "Are you sure you want to archive this section? All questions in this section will also be archived. This action can be reversed later if needed.",
-      )
-    ) {
-      return;
-    }
+  const handleDeleteSection = async () => {
+    if (!deletingSection) return;
 
     setIsLoading(true);
     try {
-      const response = await sectionApi.archiveSection(sectionId);
+      const response = await sectionApi.archiveSection(deletingSection.id);
       if (response.status === "success") {
-        onSectionsChange(sections.filter((s) => s.id !== sectionId));
+        onSectionsChange(sections.filter((s) => s.id !== deletingSection.id));
         // Remove questions from state
         setSectionQuestions((prev) => {
           const newQuestions = { ...prev };
-          delete newQuestions[sectionId];
+          delete newQuestions[deletingSection.id];
           return newQuestions;
         });
-        toast({
-          title: "Success",
-          description: "Section archived successfully!",
-          variant: "default",
-        });
+        setShowDeleteDialog(false);
+        setDeletingSection(null);
+        setSuccessMessage(
+          `Section "${deletingSection.name}" and all its questions have been archived successfully!`,
+        );
+        setShowSuccessDialog(true);
       } else {
         const errorMsg = handleApiError(response);
         onError(errorMsg);
@@ -237,6 +248,11 @@ export function SectionManager({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const openDeleteDialog = (section: FormSection) => {
+    setDeletingSection(section);
+    setShowDeleteDialog(true);
   };
 
   const handleQuestionsChange = (
@@ -335,7 +351,7 @@ export function SectionManager({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteSection(section.id)}
+                        onClick={() => openDeleteDialog(section)}
                         className="text-red-600 hover:text-red-700"
                       >
                         <Archive className="w-4 h-4" />
@@ -393,6 +409,55 @@ export function SectionManager({
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive Section</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive &quot;{deletingSection?.name}
+              &quot;? All questions in this section will also be archived. This
+              action can be reversed later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setDeletingSection(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSection}
+              disabled={isLoading}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isLoading ? "Archiving..." : "Archive Section"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Success Dialog */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span>Success</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>{successMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

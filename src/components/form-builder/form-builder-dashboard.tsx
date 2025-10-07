@@ -55,6 +55,7 @@ import {
 } from "@/lib/api/form-builder-api";
 import { FormEditor } from "./form-editor";
 import { PublishedFormsView } from "./published-forms-view";
+import { QuestionLibrary } from "./question-library";
 
 interface FormBuilderDashboardProps {
   companyRegionId?: number;
@@ -235,6 +236,15 @@ export function FormBuilderDashboard({
     return (
       <PublishedFormsView
         forms={forms.filter((f) => f.status === "active")}
+        onBack={handleBackToDashboard}
+      />
+    );
+  }
+
+  if (currentView === "templates") {
+    return (
+      <QuestionLibrary
+        selectedCountry={selectedCountry}
         onBack={handleBackToDashboard}
       />
     );

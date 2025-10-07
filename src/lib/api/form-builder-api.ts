@@ -369,19 +369,20 @@ export const templateApi = {
   ): Promise<ApiResponse<PaginatedResponse<QuestionTemplate>>> {
     let filteredTemplates = [...testQuestionTemplates];
 
+    // Always show all templates that are available for the region
     if (params.regionId) {
-      filteredTemplates = filteredTemplates.filter((t) =>
-        t.availableRegions.includes(params.regionId!),
+      filteredTemplates = filteredTemplates.filter(
+        (t) => t.availableRegions.includes(params.regionId!) || t.isGlobal,
       );
     }
 
-    if (params.category) {
+    if (params.category && params.category !== "all") {
       filteredTemplates = filteredTemplates.filter((t) =>
         t.category?.toLowerCase().includes(params.category!.toLowerCase()),
       );
     }
 
-    if (params.answerType) {
+    if (params.answerType && params.answerType !== "all") {
       filteredTemplates = filteredTemplates.filter(
         (t) => t.answerType === params.answerType,
       );
@@ -392,12 +393,13 @@ export const templateApi = {
       filteredTemplates = filteredTemplates.filter(
         (t) =>
           t.label.toLowerCase().includes(query) ||
-          t.tkey.toLowerCase().includes(query),
+          t.tkey.toLowerCase().includes(query) ||
+          (t.helperText?.toLowerCase().includes(query) ?? false),
       );
     }
 
     const page = params.page || 1;
-    const limit = params.limit || 20;
+    const limit = params.limit || 100; // Increased default limit to show more templates
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
 
@@ -439,7 +441,83 @@ export const templateApi = {
 
   // Delete template
   async deleteTemplate(id: number): Promise<ApiResponse<void>> {
-    return apiClient.delete<void>(`/question-templates/${id}`);
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    const templateIndex = testQuestionTemplates.findIndex((t) => t.id === id);
+    if (templateIndex === -1) {
+      return {
+        status: false,
+        code: "TEMPLATE_NOT_FOUND",
+        message: "Template not found",
+      };
+    }
+
+    testQuestionTemplates.splice(templateIndex, 1);
+
+    return {
+      status: "success",
+      data: undefined,
+    };
+  },
+
+  // Archive template
+  async archiveTemplate(id: number): Promise<ApiResponse<void>> {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    const templateIndex = testQuestionTemplates.findIndex((t) => t.id === id);
+    if (templateIndex === -1) {
+      return {
+        status: false,
+        code: "TEMPLATE_NOT_FOUND",
+        message: "Template not found",
+      };
+    }
+
+    testQuestionTemplates[templateIndex] = {
+      ...testQuestionTemplates[templateIndex],
+      status: "archived",
+    };
+
+    return {
+      status: "success",
+      data: undefined,
+    };
+  },
+
+  // Test API endpoint
+  async testApiEndpoint(url: string): Promise<ApiResponse<any>> {
+    // Simulate API delay
+    await new Promise((resolve) =>
+      setTimeout(resolve, 1000 + Math.random() * 2000),
+    );
+
+    // Mock API test responses
+    const mockResponses = {
+      success: {
+        status: "success",
+        data: {
+          success: true,
+          data: [
+            { id: 1, label: "Option 1", value: "opt1" },
+            { id: 2, label: "Option 2", value: "opt2" },
+            { id: 3, label: "Option 3", value: "opt3" },
+          ],
+          responseTime: 245,
+          statusCode: 200,
+        },
+      },
+      error: {
+        status: false,
+        code: "API_ERROR",
+        message: "Failed to connect to API endpoint",
+      },
+    };
+
+    // Randomly return success or error for demo
+    const isSuccess = Math.random() > 0.3;
+    return isSuccess ? mockResponses.success : mockResponses.error;
   },
 
   // Get template usage
