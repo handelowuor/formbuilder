@@ -139,8 +139,9 @@ export function FormBuilderDashboard({
 
   const handleCreateForm = async () => {
     try {
+      const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
       const response = await formApi.createForm({
-        name: "New Form",
+        name: `New Form - ${timestamp}`,
         description: "A new form created with the form builder",
         formType: "cds1",
         companyRegionId: getCompanyRegionId(selectedCountry),

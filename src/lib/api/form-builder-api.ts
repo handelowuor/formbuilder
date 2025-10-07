@@ -614,10 +614,10 @@ export const templateApi = {
       setTimeout(resolve, 1000 + Math.random() * 2000),
     );
 
-    // Mock API test responses
+    // Mock API test responses based on URL patterns
     const mockResponses = {
       success: {
-        status: "success",
+        status: "success" as const,
         data: {
           success: true,
           data: [
@@ -630,7 +630,7 @@ export const templateApi = {
         },
       },
       error: {
-        status: false,
+        status: false as const,
         code: "API_ERROR",
         message: "Failed to connect to API endpoint",
       },
