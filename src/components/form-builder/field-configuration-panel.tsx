@@ -1,27 +1,44 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Trash2, Plus, Settings, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { FormField, ValidationRule, PicklistValue } from '@/types/form-builder';
+import { useState } from "react";
+import { Trash2, Plus, Settings, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  FormField,
+  ValidationRule,
+  PicklistValue,
+  FormQuestionUsage,
+} from "@/types/form-builder";
 
 interface FieldConfigurationPanelProps {
   field: FormField;
   onUpdate: (field: FormField) => void;
   onDelete: () => void;
+  questionUsage?: FormQuestionUsage[];
 }
 
-export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConfigurationPanelProps) {
-  const [activeTab, setActiveTab] = useState('basic');
+export function FieldConfigurationPanel({
+  field,
+  onUpdate,
+  onDelete,
+  questionUsage = [],
+}: FieldConfigurationPanelProps) {
+  const [activeTab, setActiveTab] = useState("basic");
 
   const handleFieldUpdate = (updates: Partial<FormField>) => {
     onUpdate({ ...field, ...updates });
@@ -30,50 +47,60 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
   const handleValidationRuleAdd = () => {
     const newRule: ValidationRule = {
       id: Date.now().toString(),
-      type: 'required',
-      message: 'This field is required'
+      type: "required",
+      message: "This field is required",
     };
     handleFieldUpdate({
-      validationRules: [...field.validationRules, newRule]
+      validationRules: [...field.validationRules, newRule],
     });
   };
 
-  const handleValidationRuleUpdate = (ruleId: string, updates: Partial<ValidationRule>) => {
+  const handleValidationRuleUpdate = (
+    ruleId: string,
+    updates: Partial<ValidationRule>,
+  ) => {
     handleFieldUpdate({
-      validationRules: field.validationRules.map(rule =>
-        rule.id === ruleId ? { ...rule, ...updates } : rule
-      )
+      validationRules: field.validationRules.map((rule) =>
+        rule.id === ruleId ? { ...rule, ...updates } : rule,
+      ),
     });
   };
 
   const handleValidationRuleDelete = (ruleId: string) => {
     handleFieldUpdate({
-      validationRules: field.validationRules.filter(rule => rule.id !== ruleId)
+      validationRules: field.validationRules.filter(
+        (rule) => rule.id !== ruleId,
+      ),
     });
   };
 
   const handlePicklistValueAdd = () => {
     const newValue: PicklistValue = {
       id: Date.now().toString(),
-      label: 'New Option',
-      value: 'new_option'
+      label: "New Option",
+      value: "new_option",
     };
     handleFieldUpdate({
-      picklistValues: [...(field.picklistValues || []), newValue]
+      picklistValues: [...(field.picklistValues || []), newValue],
     });
   };
 
-  const handlePicklistValueUpdate = (valueId: string, updates: Partial<PicklistValue>) => {
+  const handlePicklistValueUpdate = (
+    valueId: string,
+    updates: Partial<PicklistValue>,
+  ) => {
     handleFieldUpdate({
-      picklistValues: (field.picklistValues || []).map(value =>
-        value.id === valueId ? { ...value, ...updates } : value
-      )
+      picklistValues: (field.picklistValues || []).map((value) =>
+        value.id === valueId ? { ...value, ...updates } : value,
+      ),
     });
   };
 
   const handlePicklistValueDelete = (valueId: string) => {
     handleFieldUpdate({
-      picklistValues: (field.picklistValues || []).filter(value => value.id !== valueId)
+      picklistValues: (field.picklistValues || []).filter(
+        (value) => value.id !== valueId,
+      ),
     });
   };
 
@@ -89,10 +116,13 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic">Basic</TabsTrigger>
             <TabsTrigger value="validation">Validation</TabsTrigger>
             <TabsTrigger value="advanced">Advanced</TabsTrigger>
+            {field.isFromTemplate && (
+              <TabsTrigger value="usage">Usage</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4 mt-4">
@@ -120,8 +150,10 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
               <Label htmlFor="field-help-text">Help Text</Label>
               <Textarea
                 id="field-help-text"
-                value={field.helpText || ''}
-                onChange={(e) => handleFieldUpdate({ helpText: e.target.value })}
+                value={field.helpText || ""}
+                onChange={(e) =>
+                  handleFieldUpdate({ helpText: e.target.value })
+                }
                 className="mt-1"
                 rows={2}
               />
@@ -131,33 +163,50 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
               <Switch
                 id="field-required"
                 checked={field.required}
-                onCheckedChange={(checked) => handleFieldUpdate({ required: checked })}
+                onCheckedChange={(checked) =>
+                  handleFieldUpdate({ required: checked })
+                }
               />
               <Label htmlFor="field-required">Required Field</Label>
             </div>
 
             {/* Type-specific configurations */}
-            {field.type === 'dropdown' && (
+            {field.type === "dropdown" && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label>Picklist Values</Label>
-                  <Button variant="outline" size="sm" onClick={handlePicklistValueAdd}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePicklistValueAdd}
+                  >
                     <Plus className="w-4 h-4 mr-1" />
                     Add Option
                   </Button>
                 </div>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {(field.picklistValues || []).map((value) => (
-                    <div key={value.id} className="flex items-center space-x-2 p-2 border rounded">
+                    <div
+                      key={value.id}
+                      className="flex items-center space-x-2 p-2 border rounded"
+                    >
                       <Input
                         value={value.label}
-                        onChange={(e) => handlePicklistValueUpdate(value.id, { label: e.target.value })}
+                        onChange={(e) =>
+                          handlePicklistValueUpdate(value.id, {
+                            label: e.target.value,
+                          })
+                        }
                         placeholder="Label"
                         className="flex-1"
                       />
                       <Input
                         value={value.value}
-                        onChange={(e) => handlePicklistValueUpdate(value.id, { value: e.target.value })}
+                        onChange={(e) =>
+                          handlePicklistValueUpdate(value.id, {
+                            value: e.target.value,
+                          })
+                        }
                         placeholder="Value"
                         className="flex-1"
                       />
@@ -174,15 +223,17 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
               </div>
             )}
 
-            {field.type === 'number' && (
+            {field.type === "number" && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="min-value">Min Value</Label>
                   <Input
                     id="min-value"
                     type="number"
-                    value={field.minValue || ''}
-                    onChange={(e) => handleFieldUpdate({ minValue: Number(e.target.value) })}
+                    value={field.minValue || ""}
+                    onChange={(e) =>
+                      handleFieldUpdate({ minValue: Number(e.target.value) })
+                    }
                     className="mt-1"
                   />
                 </div>
@@ -191,21 +242,25 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
                   <Input
                     id="max-value"
                     type="number"
-                    value={field.maxValue || ''}
-                    onChange={(e) => handleFieldUpdate({ maxValue: Number(e.target.value) })}
+                    value={field.maxValue || ""}
+                    onChange={(e) =>
+                      handleFieldUpdate({ maxValue: Number(e.target.value) })
+                    }
                     className="mt-1"
                   />
                 </div>
               </div>
             )}
 
-            {field.type === 'formula' && (
+            {field.type === "formula" && (
               <div>
                 <Label htmlFor="formula">Formula Expression</Label>
                 <Textarea
                   id="formula"
-                  value={field.formula || ''}
-                  onChange={(e) => handleFieldUpdate({ formula: e.target.value })}
+                  value={field.formula || ""}
+                  onChange={(e) =>
+                    handleFieldUpdate({ formula: e.target.value })
+                  }
                   className="mt-1"
                   rows={3}
                   placeholder="e.g., field1 + field2 * 0.1"
@@ -213,14 +268,16 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
               </div>
             )}
 
-            {field.type === 'lookup' && (
+            {field.type === "lookup" && (
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="lookup-object">Lookup Object</Label>
                   <Input
                     id="lookup-object"
-                    value={field.lookupObject || ''}
-                    onChange={(e) => handleFieldUpdate({ lookupObject: e.target.value })}
+                    value={field.lookupObject || ""}
+                    onChange={(e) =>
+                      handleFieldUpdate({ lookupObject: e.target.value })
+                    }
                     className="mt-1"
                     placeholder="e.g., Account, Contact"
                   />
@@ -229,8 +286,10 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
                   <Label htmlFor="lookup-field">Display Field</Label>
                   <Input
                     id="lookup-field"
-                    value={field.lookupField || ''}
-                    onChange={(e) => handleFieldUpdate({ lookupField: e.target.value })}
+                    value={field.lookupField || ""}
+                    onChange={(e) =>
+                      handleFieldUpdate({ lookupField: e.target.value })
+                    }
                     className="mt-1"
                     placeholder="e.g., Name, Email"
                   />
@@ -242,7 +301,11 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
           <TabsContent value="validation" className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
               <h4 className="font-medium">Validation Rules</h4>
-              <Button variant="outline" size="sm" onClick={handleValidationRuleAdd}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleValidationRuleAdd}
+              >
                 <Plus className="w-4 h-4 mr-1" />
                 Add Rule
               </Button>
@@ -255,7 +318,11 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
                     <div className="flex items-center justify-between">
                       <Select
                         value={rule.type}
-                        onValueChange={(value) => handleValidationRuleUpdate(rule.id, { type: value as any })}
+                        onValueChange={(value) =>
+                          handleValidationRuleUpdate(rule.id, {
+                            type: value as any,
+                          })
+                        }
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />
@@ -277,26 +344,39 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
                       </Button>
                     </div>
 
-                    {(rule.type === 'minLength' || rule.type === 'maxLength') && (
+                    {(rule.type === "minLength" ||
+                      rule.type === "maxLength") && (
                       <Input
                         type="number"
-                        value={rule.value || ''}
-                        onChange={(e) => handleValidationRuleUpdate(rule.id, { value: Number(e.target.value) })}
+                        value={rule.value || ""}
+                        onChange={(e) =>
+                          handleValidationRuleUpdate(rule.id, {
+                            value: Number(e.target.value),
+                          })
+                        }
                         placeholder="Enter value"
                       />
                     )}
 
-                    {rule.type === 'pattern' && (
+                    {rule.type === "pattern" && (
                       <Input
-                        value={rule.value || ''}
-                        onChange={(e) => handleValidationRuleUpdate(rule.id, { value: e.target.value })}
+                        value={rule.value || ""}
+                        onChange={(e) =>
+                          handleValidationRuleUpdate(rule.id, {
+                            value: e.target.value,
+                          })
+                        }
                         placeholder="Enter regex pattern"
                       />
                     )}
 
                     <Input
                       value={rule.message}
-                      onChange={(e) => handleValidationRuleUpdate(rule.id, { message: e.target.value })}
+                      onChange={(e) =>
+                        handleValidationRuleUpdate(rule.id, {
+                          message: e.target.value,
+                        })
+                      }
                       placeholder="Error message"
                     />
                   </div>
@@ -317,20 +397,26 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
               <Label htmlFor="default-value">Default Value</Label>
               <Input
                 id="default-value"
-                value={field.defaultValue?.toString() || ''}
-                onChange={(e) => handleFieldUpdate({ defaultValue: e.target.value })}
+                value={field.defaultValue?.toString() || ""}
+                onChange={(e) =>
+                  handleFieldUpdate({ defaultValue: e.target.value })
+                }
                 className="mt-1"
               />
             </div>
 
-            {field.type === 'dropdown' && (
+            {field.type === "dropdown" && (
               <div className="flex items-center space-x-2">
                 <Switch
                   id="use-global-valueset"
                   checked={field.useGlobalValueSet || false}
-                  onCheckedChange={(checked) => handleFieldUpdate({ useGlobalValueSet: checked })}
+                  onCheckedChange={(checked) =>
+                    handleFieldUpdate({ useGlobalValueSet: checked })
+                  }
                 />
-                <Label htmlFor="use-global-valueset">Use Global Value Set</Label>
+                <Label htmlFor="use-global-valueset">
+                  Use Global Value Set
+                </Label>
               </div>
             )}
 
@@ -339,7 +425,8 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
             <div>
               <h4 className="font-medium mb-2">Field Dependencies</h4>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-                Configure when this field should be visible or required based on other field values
+                Configure when this field should be visible or required based on
+                other field values
               </p>
               <Button variant="outline" size="sm" disabled>
                 <Plus className="w-4 h-4 mr-1" />
@@ -356,17 +443,76 @@ export function FieldConfigurationPanel({ field, onUpdate, onDelete }: FieldConf
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Required:</span>
-                  <Badge variant={field.required ? 'destructive' : 'secondary'}>
-                    {field.required ? 'Yes' : 'No'}
+                  <Badge variant={field.required ? "destructive" : "secondary"}>
+                    {field.required ? "Yes" : "No"}
                   </Badge>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Validation Rules:</span>
-                  <Badge variant="outline">{field.validationRules.length}</Badge>
+                  <Badge variant="outline">
+                    {field.validationRules.length}
+                  </Badge>
                 </div>
               </div>
             </div>
           </TabsContent>
+
+          {field.isFromTemplate && (
+            <TabsContent value="usage" className="space-y-4 mt-4">
+              <div>
+                <h4 className="font-medium mb-2 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-2 text-blue-500" />
+                  Shared Question
+                </h4>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                  This question is from a template and may be used in other
+                  forms. Changes here will only affect this form.
+                </p>
+              </div>
+
+              {questionUsage.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Used in Other Forms</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {questionUsage.map((usage) => (
+                      <div
+                        key={`${usage.formId}-${usage.sectionId}`}
+                        className="p-2 border rounded text-sm"
+                      >
+                        <div className="font-medium">{usage.formName}</div>
+                        <div className="text-slate-500 dark:text-slate-400">
+                          Section: {usage.sectionName}
+                        </div>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Badge
+                            variant={usage.isActive ? "default" : "secondary"}
+                          >
+                            {usage.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                          {usage.required && (
+                            <Badge variant="destructive" className="text-xs">
+                              Required
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                  Template Information
+                </h5>
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  <div>Template ID: {field.templateId}</div>
+                  <div>API Name: {field.apiName}</div>
+                  <div>Type: {field.type}</div>
+                </div>
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </CardContent>
     </Card>

@@ -1,33 +1,47 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { ArrowLeft, Save, Eye, Plus, Settings, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Form, FormField } from '@/types/form-builder';
-import { FieldTypeSelector } from './field-type-selector';
-import { FieldConfigurationPanel } from './field-configuration-panel';
-import { FormPreview } from './form-preview';
+import { useState } from "react";
+import { ArrowLeft, Save, Eye, Plus, Settings, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Form,
+  FormField,
+  QuestionTemplate,
+  CompanyRegion,
+} from "@/types/form-builder";
+import { FieldTypeSelector } from "./field-type-selector";
+import { FieldConfigurationPanel } from "./field-configuration-panel";
+import { FormPreview } from "./form-preview";
 
 interface FormEditorProps {
   form: Form;
   onBack: () => void;
   onSave: (form: Form) => void;
+  selectedRegion?: number;
+  availableTemplates?: QuestionTemplate[];
 }
 
-export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
+export function FormEditor({
+  form,
+  onBack,
+  onSave,
+  selectedRegion,
+  availableTemplates = [],
+}: FormEditorProps) {
   const [currentForm, setCurrentForm] = useState<Form>(form);
   const [selectedField, setSelectedField] = useState<FormField | null>(null);
   const [showFieldSelector, setShowFieldSelector] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
 
   const handleFormUpdate = (updates: Partial<Form>) => {
-    setCurrentForm(prev => ({ ...prev, ...updates, updatedAt: new Date() }));
+    setCurrentForm((prev) => ({ ...prev, ...updates, updatedAt: new Date() }));
   };
 
   const handleAddField = (fieldType: string) => {
@@ -38,35 +52,35 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
       apiName: `new_${fieldType}_field_${Date.now()}`,
       required: false,
       validationRules: [],
-      dependencies: []
+      dependencies: [],
     };
 
-    setCurrentForm(prev => ({
+    setCurrentForm((prev) => ({
       ...prev,
       fields: [...prev.fields, newField],
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }));
-    
+
     setSelectedField(newField);
     setShowFieldSelector(false);
   };
 
   const handleFieldUpdate = (updatedField: FormField) => {
-    setCurrentForm(prev => ({
+    setCurrentForm((prev) => ({
       ...prev,
-      fields: prev.fields.map(field => 
-        field.id === updatedField.id ? updatedField : field
+      fields: prev.fields.map((field) =>
+        field.id === updatedField.id ? updatedField : field,
       ),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }));
     setSelectedField(updatedField);
   };
 
   const handleFieldDelete = (fieldId: string) => {
-    setCurrentForm(prev => ({
+    setCurrentForm((prev) => ({
       ...prev,
-      fields: prev.fields.filter(field => field.id !== fieldId),
-      updatedAt: new Date()
+      fields: prev.fields.filter((field) => field.id !== fieldId),
+      updatedAt: new Date(),
     }));
     if (selectedField?.id === fieldId) {
       setSelectedField(null);
@@ -80,18 +94,15 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
   const handlePublish = () => {
     const publishedForm = {
       ...currentForm,
-      status: 'published' as const,
-      updatedAt: new Date()
+      status: "published" as const,
+      updatedAt: new Date(),
     };
     onSave(publishedForm);
   };
 
   if (showPreview) {
     return (
-      <FormPreview 
-        form={currentForm} 
-        onBack={() => setShowPreview(false)} 
-      />
+      <FormPreview form={currentForm} onBack={() => setShowPreview(false)} />
     );
   }
 
@@ -112,7 +123,13 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
                   {currentForm.name}
                 </h1>
                 <div className="flex items-center space-x-2 mt-1">
-                  <Badge variant={currentForm.status === 'published' ? 'default' : 'secondary'}>
+                  <Badge
+                    variant={
+                      currentForm.status === "published"
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
                     {currentForm.status}
                   </Badge>
                   <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -121,9 +138,13 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPreview(true)}
+              >
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </Button>
@@ -161,8 +182,10 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
                   <Label htmlFor="form-description">Description</Label>
                   <Textarea
                     id="form-description"
-                    value={currentForm.description || ''}
-                    onChange={(e) => handleFormUpdate({ description: e.target.value })}
+                    value={currentForm.description || ""}
+                    onChange={(e) =>
+                      handleFormUpdate({ description: e.target.value })
+                    }
                     className="mt-1"
                     rows={3}
                   />
@@ -171,16 +194,29 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
                 <div>
                   <h4 className="font-medium mb-2">Quick Actions</h4>
                   <div className="space-y-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full justify-start"
                       onClick={() => setShowFieldSelector(true)}
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Add Field
+                      Add New Field
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => setShowTemplateLibrary(true)}
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Add from Library
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                    >
                       <Settings className="w-4 h-4 mr-2" />
                       Form Settings
                     </Button>
@@ -196,8 +232,8 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Form Canvas</CardTitle>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => setShowFieldSelector(true)}
                   >
@@ -230,8 +266,8 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
                         key={field.id}
                         className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                           selectedField?.id === field.id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                            ? "border-primary bg-primary/5"
+                            : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                         }`}
                         onClick={() => setSelectedField(field)}
                       >
@@ -249,7 +285,10 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
                                   {field.type}
                                 </Badge>
                                 {field.required && (
-                                  <Badge variant="destructive" className="text-xs">
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-xs"
+                                  >
                                     Required
                                   </Badge>
                                 )}
@@ -308,6 +347,64 @@ export function FormEditor({ form, onBack, onSave }: FormEditorProps) {
           onSelect={handleAddField}
           onClose={() => setShowFieldSelector(false)}
         />
+      )}
+
+      {/* Template Library Modal */}
+      {showTemplateLibrary && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Question Library</h2>
+              <Button
+                variant="ghost"
+                onClick={() => setShowTemplateLibrary(false)}
+              >
+                ×
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {availableTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className="p-4 border rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700"
+                  onClick={() => {
+                    const newField: FormField = {
+                      id: Date.now().toString(),
+                      type: template.answerType,
+                      label: template.label,
+                      apiName: template.tkey,
+                      required: false,
+                      validationRules: [],
+                      dependencies: [],
+                      templateId: template.id,
+                      isFromTemplate: true,
+                      helpText: template.helperText,
+                    };
+
+                    setCurrentForm((prev) => ({
+                      ...prev,
+                      fields: [...prev.fields, newField],
+                      updatedAt: new Date(),
+                    }));
+
+                    setSelectedField(newField);
+                    setShowTemplateLibrary(false);
+                  }}
+                >
+                  <h3 className="font-medium">{template.label}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {template.answerType}
+                  </p>
+                  {template.helperText && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      {template.helperText}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
